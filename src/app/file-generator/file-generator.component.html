@@ -13,10 +13,15 @@
       <app-job-list
         [jobs]="recentJobs"
         [loading]="loading"
+        [currentPage]="pagination.currentPage"
+        [pageSize]="pagination.pageSize"
+        [totalItems]="pagination.totalItems"
+        [totalPages]="pagination.totalPages"
         (download)="onDownloadFile($event)"
         (cancel)="onCancelJob($event)"
         (retry)="onRetryJob($event)"
-        (refresh)="onJobsRefresh()">
+        (refresh)="onJobsRefresh()"
+        (pageChange)="onPageChange($event)">
       </app-job-list>
     </div>
   </div>

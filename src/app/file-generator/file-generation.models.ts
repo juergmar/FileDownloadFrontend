@@ -68,3 +68,12 @@ export interface ServiceNotification {
   message: string;
   timestamp: string;
 }
+
+// New pagination-related interfaces
+export interface PagedJobResponse {
+  jobs: JobDTO[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}

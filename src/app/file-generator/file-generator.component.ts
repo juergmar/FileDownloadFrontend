@@ -16,7 +16,7 @@ import { JobListComponent } from './job-list.component';
 import { FileGenerationService } from './file-generation.service';
 import { FileType, JobDTO } from './file-generation.models';
 import { JobProcessingService } from './job-processing.service';
-import { JobListManagerService } from './job-list-manager.service';
+import { JobListManagerService, JobPagination } from './job-list-manager.service';
 
 @Component({
     selector: 'app-file-generator',
@@ -52,6 +52,12 @@ export class FileGeneratorComponent implements OnInit, OnDestroy {
     public connectionStatus = false;
     public currentProcessingJob: JobDTO | null = null;
     public showProcessingDialog = false;
+    public pagination: JobPagination = {
+        currentPage: 0,
+        pageSize: 10,
+        totalItems: 0,
+        totalPages: 0
+    };
 
     public ngOnInit(): void {
         // Load jobs and setup subscriptions
@@ -67,6 +73,12 @@ export class FileGeneratorComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe(loading => {
                 this.loading = loading;
+            });
+
+        this.jobListManagerService.pagination$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(pagination => {
+                this.pagination = pagination;
             });
 
         // Subscribe to connection status
@@ -126,6 +138,10 @@ export class FileGeneratorComponent implements OnInit, OnDestroy {
         this.jobListManagerService.loadJobs();
     }
 
+    public onPageChange(event: any): void {
+        this.jobListManagerService.onPageChange(event);
+    }
+
     public downloadCurrentProcessingFile(): void {
         if (this.currentProcessingJob) {
             this.onDownloadFile(this.currentProcessingJob.jobId);
@@ -133,7 +149,8 @@ export class FileGeneratorComponent implements OnInit, OnDestroy {
     }
 
     public onProcessingDialogClosed(): void {
+        // This method is called regardless of how the dialog was closed
+        // (via the Close button, X icon, or Escape key)
         this.currentProcessingJob = null;
-        this.showProcessingDialog = false;
     }
 }

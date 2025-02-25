@@ -8,6 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { CardModule } from 'primeng/card';
 import { SkeletonModule } from 'primeng/skeleton';
+import { PaginatorModule } from 'primeng/paginator';
 import { JobDTO, JobStatus } from './file-generation.models';
 import { FileTypePipe } from './file-type.pipe';
 import { JobStatusPipe } from './job-status.pipe';
@@ -23,6 +24,7 @@ import { JobStatusPipe } from './job-status.pipe';
     TooltipModule,
     CardModule,
     SkeletonModule,
+    PaginatorModule,
     FileTypePipe,
     JobStatusPipe
   ],
@@ -33,11 +35,16 @@ import { JobStatusPipe } from './job-status.pipe';
 export class JobListComponent {
   @Input() public jobs: JobDTO[] = [];
   @Input() public loading: boolean = false;
+  @Input() public currentPage: number = 0;
+  @Input() public pageSize: number = 10;
+  @Input() public totalItems: number = 0;
+  @Input() public totalPages: number = 0;
 
   @Output() public download = new EventEmitter<string>();
   @Output() public cancel = new EventEmitter<string>();
   @Output() public retry = new EventEmitter<string>();
   @Output() public refresh = new EventEmitter<void>();
+  @Output() public pageChange = new EventEmitter<any>();
 
   public getStatusSeverity(status: JobStatus): "success" | "secondary" | "info" | "warn" | "danger" | "contrast" | undefined {
     switch (status) {
@@ -73,6 +80,10 @@ export class JobListComponent {
 
   public onRefreshClicked(): void {
     this.refresh.emit();
+  }
+
+  public onPageChangeEvent(event: any): void {
+    this.pageChange.emit(event);
   }
 
   // Track by function for optimized rendering

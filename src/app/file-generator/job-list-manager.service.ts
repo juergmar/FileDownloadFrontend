@@ -1,10 +1,17 @@
 import {Injectable, OnDestroy} from '@angular/core';
-import {Subject, Observable, timer, Subscription, BehaviorSubject} from 'rxjs';
-import {takeUntil, switchMap, catchError, finalize} from 'rxjs/operators';
+import {BehaviorSubject, Observable, Subject, Subscription, timer} from 'rxjs';
+import {takeUntil} from 'rxjs/operators';
 import {MessageService} from 'primeng/api';
 
 import {FileGenerationService} from './file-generation.service';
 import {JobDTO, JobStatus, WebSocketMessage} from './file-generation.models';
+
+export interface JobPagination {
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
 
 @Injectable()
 export class JobListManagerService implements OnDestroy {
@@ -12,14 +19,21 @@ export class JobListManagerService implements OnDestroy {
   private destroy$: Subject<void> = new Subject<void>();
   private jobsSubject: BehaviorSubject<JobDTO[]> = new BehaviorSubject<JobDTO[]>([]);
   private loadingSubject: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-  private refreshSubscription?: Subscription;
+  private paginationSubject: BehaviorSubject<JobPagination> = new BehaviorSubject<JobPagination>({
+    currentPage: 0,
+    pageSize: 10,
+    totalItems: 0,
+    totalPages: 0
+  });
 
   private readonly STANDARD_REFRESH_INTERVAL: number = 15000;
   private readonly ACTIVE_JOB_REFRESH_INTERVAL: number = 5000;
   private readonly LOADING_MIN_DURATION: number = 300;
+  private refreshSubscription?: Subscription;
 
   public jobs$: Observable<JobDTO[]> = this.jobsSubject.asObservable();
   public loading$: Observable<boolean> = this.loadingSubject.asObservable();
+  public pagination$: Observable<JobPagination> = this.paginationSubject.asObservable();
 
   constructor(
     private fileGenerationService: FileGenerationService,
@@ -38,6 +52,28 @@ export class JobListManagerService implements OnDestroy {
   }
 
   /**
+   * Change current page
+   * @param event Page event from paginator
+   */
+  public onPageChange(event: any): void {
+    const pagination = this.paginationSubject.getValue();
+    const newPage = event.page;
+    const newSize = event.rows;
+
+    // Only load if page or size changed
+    if (pagination.currentPage !== newPage || pagination.pageSize !== newSize) {
+      this.paginationSubject.next({
+        ...pagination,
+        currentPage: newPage,
+        pageSize: newSize
+      });
+
+      // Load jobs with new pagination
+      this.loadJobs(true);
+    }
+  }
+
+  /**
    * Manually load the job list - will emit to subscribers
    * @param showLoading Whether to show the loading indicator
    */
@@ -47,13 +83,22 @@ export class JobListManagerService implements OnDestroy {
     }
 
     const loadingStartTime = Date.now();
+    const pagination = this.paginationSubject.getValue();
 
-    this.fileGenerationService.getRecentJobs()
+    this.fileGenerationService.getRecentJobs(pagination.currentPage, pagination.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (jobs) => {
+        next: (response) => {
           // Update jobs with a smart merge to preserve existing data when possible
-          this.smartUpdateJobs(jobs);
+          this.smartUpdateJobs(response.jobs);
+
+          // Update pagination information
+          this.paginationSubject.next({
+            currentPage: pagination.currentPage,
+            pageSize: pagination.pageSize,
+            totalItems: response.totalItems,
+            totalPages: response.totalPages
+          });
 
           // Ensure loading indicator stays visible for minimum duration to prevent flashing
           const loadingElapsed = Date.now() - loadingStartTime;
@@ -104,7 +149,6 @@ export class JobListManagerService implements OnDestroy {
 
     this.jobsSubject.next(this.jobs);
   }
-
 
   private startAutoRefresh(): void {
     if (this.refreshSubscription) {

@@ -8,7 +8,8 @@ import {
   GenerateFileRequest,
   GenerateFileResponse,
   WebSocketMessage,
-  JobSubscriptionRequest
+  JobSubscriptionRequest,
+  PagedJobResponse
 } from './file-generation.models';
 import { RxStompService } from './rx-stomp.service';
 import { RxStompState } from '@stomp/rx-stomp';
@@ -64,7 +65,7 @@ export class FileGenerationService {
    */
   private getJobFromRecent(jobId: string): Observable<JobDTO | null> {
     return this.getRecentJobs().pipe(
-      map(jobs => jobs.find(job => job.jobId === jobId) || null),
+      map(response => response.jobs.find(job => job.jobId === jobId) || null),
       catchError(error => {
         console.error(`Error fetching job info for job ${jobId}:`, error);
         return of(null);
@@ -113,10 +114,12 @@ export class FileGenerationService {
   }
 
   /**
-   * Get recent jobs
+   * Get recent jobs with pagination
+   * @param page Page number (0-based)
+   * @param size Page size
    */
-  public getRecentJobs(page: number = 0, size: number = 25): Observable<JobDTO[]> {
-    return this.http.get<JobDTO[]>(`${this.apiUrl}/recent?page=${page}&size=${size}`);
+  public getRecentJobs(page: number = 0, size: number = 10): Observable<PagedJobResponse> {
+    return this.http.get<PagedJobResponse>(`${this.apiUrl}/recent?page=${page}&size=${size}`);
   }
 
   /**
