@@ -1,0 +1,38 @@
+<div class="file-management-container">
+  <div class="page-header">
+    <h2>File Management</h2>
+  </div>
+
+  <p-card styleClass="tabs-card">
+    <p-tabs [(value)]="activeTabValue">
+      <p-tablist>
+        <p-tab value="0">Generate File</p-tab>
+        <p-tab value="1">My Files</p-tab>
+      </p-tablist>
+      <p-tabpanels>
+        <p-tabpanel value="0">
+          <div class="tab-content-container">
+            <app-file-generator></app-file-generator>
+          </div>
+        </p-tabpanel>
+        <p-tabpanel value="1">
+          <div class="tab-content-container">
+            <div class="my-files-container">
+              <div class="empty-state">
+                <i class="pi pi-folder-open" style="font-size: 3rem; color: var(--primary-color-light); margin-bottom: 1rem;"></i>
+                <h3>No Files Found</h3>
+                <p>Files you generate will appear here for easy access</p>
+                <p-button
+                  label="Generate a File"
+                  icon="pi pi-file"
+                  styleClass="p-button-outlined mt-3"
+                  (onClick)="activateGenerateTab()">
+                </p-button>
+              </div>
+            </div>
+          </div>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </p-card>
+</div>

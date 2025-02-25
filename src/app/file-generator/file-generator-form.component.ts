@@ -9,6 +9,7 @@ import {DropdownModule} from 'primeng/dropdown';
 import {DialogModule} from 'primeng/dialog';
 import {FileType} from './file-generation.models';
 import {Select} from 'primeng/select';
+import {InputText} from 'primeng/inputtext';
 
 @Component({
   selector: 'app-file-generator-form',
@@ -20,7 +21,8 @@ import {Select} from 'primeng/select';
     CardModule,
     DropdownModule,
     DialogModule,
-    Select
+    Select,
+    InputText
   ],
   templateUrl: './file-generator-form.component.html',
   styleUrls: ['./file-generator-form.component.scss']
@@ -62,7 +64,6 @@ export class FileGeneratorFormComponent {
   }
 
   public submitGenerateFile(): void {
-    // Prepare parameters based on the file type
     if (this.selectedFileType === FileType.CUSTOM_REPORT && this.customReportName) {
       this.parameters['reportName'] = this.customReportName;
     }
@@ -75,6 +76,7 @@ export class FileGeneratorFormComponent {
       parameters: this.parameters
     });
 
+    // Reset isGenerating after a short delay
     setTimeout(() => {
       this.isGenerating = false;
     }, 1000);

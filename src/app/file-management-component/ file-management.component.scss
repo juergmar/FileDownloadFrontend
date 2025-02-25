@@ -1,0 +1,118 @@
+.file-management-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.page-header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+  }
+}
+
+.tabs-card {
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tab-content-container {
+  padding: 1rem;
+}
+
+.my-files-container {
+  padding: 1rem 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color);
+    font-weight: 500;
+  }
+
+  p {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color-secondary);
+  }
+
+  .mt-3 {
+    margin-top: 1.5rem;
+  }
+}
+
+:host ::ng-deep {
+  .p-card {
+    .p-card-content {
+      padding: 0;
+    }
+  }
+
+  .p-tabs {
+    .p-tabview-nav {
+      background: #ffffff;
+      border: none;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 0;
+      display: flex;
+      justify-content: center; // Center align the tabs
+
+      li {
+        margin: 0 1rem;
+
+        .p-tabview-nav-link {
+          padding: 0.75rem 1.5rem;
+          border-bottom: 2px solid transparent;
+          transition: all 0.2s ease;
+          color: var(--text-color-secondary);
+          font-weight: 500;
+
+          &:hover {
+            border-bottom-color: rgba(0, 150, 136, 0.3);
+            background-color: transparent;
+            color: var(--text-color);
+          }
+        }
+
+        &.p-highlight .p-tabview-nav-link {
+          border-bottom-color: var(--primary-color);
+          color: var(--primary-color);
+          background-color: transparent;
+        }
+      }
+    }
+
+    .p-tabview-panels {
+      padding: 0;
+    }
+  }
+
+  .p-tab-header {
+    display: flex;
+    justify-content: center;
+  }
+
+  .p-tablist {
+    justify-content: center;
+    border-bottom: 1px solid #e9ecef;
+    width: 100%;
+  }
+
+  .p-tabpanel {
+    padding-top: 1.5rem;
+  }
+}

@@ -1,9 +1,10 @@
-// file-management.component.ts
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {Tab, Tabs, TabsModule} from 'primeng/tabs'; // Import TabsModule
+import { TabsModule } from 'primeng/tabs';
 import { CardModule } from 'primeng/card';
+import { ButtonModule } from 'primeng/button';
 import { FileGeneratorComponent } from '../file-generator/file-generator.component';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-file-management',
@@ -12,41 +13,26 @@ import { FileGeneratorComponent } from '../file-generator/file-generator.compone
     CommonModule,
     TabsModule,
     CardModule,
+    ButtonModule,
     FileGeneratorComponent,
   ],
-  template: `
-    <div class="file-management-container">
-      <p-card>
-        <h2>File Management</h2>
-        <p-tabs value="0">
-          <p-tablist>
-            <p-tab value="0">Generate File</p-tab>
-            <p-tab value="1">My Files</p-tab>
-          </p-tablist>
-          <p-tabpanels>
-            <p-tabpanel value="0">
-              <app-file-generator></app-file-generator>
-            </p-tabpanel>
-            <p-tabpanel value="1">
-              <div class="my-files-container">
-                <p>View and manage your previously generated files.</p>
-              </div>
-            </p-tabpanel>
-          </p-tabpanels>
-        </p-tabs>
-      </p-card>
-    </div>
-
-  `,
-  styles: [`
-    .file-management-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 1rem;
-    }
-    .my-files-container {
-      padding: 1rem 0;
-    }
-  `]
+  providers: [
+    MessageService
+  ],
+  templateUrl: './file-management.component.html',
+  styleUrls: ['./file-management.component.scss']
 })
-export class FileManagementComponent {}
+export class FileManagementComponent {
+  /**
+   * The currently active tab value
+   */
+  public activeTabValue: string = '0';
+
+  /**
+   * Switch to the Generate File tab
+   * @returns {void}
+   */
+  public activateGenerateTab(): void {
+    this.activeTabValue = '0';
+  }
+}

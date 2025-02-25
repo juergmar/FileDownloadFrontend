@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpResponse } from '@angular/common/http';
-import {Observable, Subject, BehaviorSubject, map, catchError, interval, switchMap, tap} from 'rxjs';
+import { Observable, Subject, BehaviorSubject, map, catchError, of, switchMap, timer, tap } from 'rxjs';
 
 import {
   FileType,
@@ -34,11 +34,10 @@ export class FileGenerationService {
   }
 
   public pollJobStatus(jobId: string, intervalMs: number = 3000): Observable<JobDTO | null> {
-    return interval(intervalMs).pipe(
-      switchMap(() => this.getJobStatus(jobId)),
+    return timer(0, intervalMs).pipe(
+      switchMap(() => this.getJobFromRecent(jobId)),
       tap(job => {
         if (job) {
-
           const update: WebSocketMessage = {
             jobId: job.jobId,
             fileType: job.fileType,
@@ -51,24 +50,30 @@ export class FileGenerationService {
           };
           this.jobUpdatesSubject.next(update);
         }
-      })
-    );
-  }
-
-  public getJobStatus(jobId: string): Observable<JobDTO | null> {
-    return this.http.get<JobDTO>(`${this.apiUrl}/status/${jobId}`).pipe(
+      }),
       catchError(error => {
-        console.error(`Error fetching status for job ${jobId}:`, error);
-        // If the specific endpoint doesn't exist, fallback to get all jobs and filter
-        return this.getRecentJobs().pipe(
-          map(jobs => jobs.find(job => job.jobId === jobId) || null)
-        );
+        console.error('Error polling job status:', error);
+        return of(null);
       })
     );
   }
 
   /**
-   * Subscribe to updates for a specific job
+   * Get a job status by finding it in the recent jobs list
+   * This is a fallback since there's no direct status endpoint
+   */
+  private getJobFromRecent(jobId: string): Observable<JobDTO | null> {
+    return this.getRecentJobs().pipe(
+      map(jobs => jobs.find(job => job.jobId === jobId) || null),
+      catchError(error => {
+        console.error(`Error fetching job info for job ${jobId}:`, error);
+        return of(null);
+      })
+    );
+  }
+
+  /**
+   * Subscribe to updates for a specific job via WebSocket
    */
   public subscribeToJobUpdates(jobId: string): void {
     if (!this.connectionStatusSubject.value) {
@@ -110,7 +115,7 @@ export class FileGenerationService {
   /**
    * Get recent jobs
    */
-  public getRecentJobs(page: number = 0, size: number = 10): Observable<JobDTO[]> {
+  public getRecentJobs(page: number = 0, size: number = 25): Observable<JobDTO[]> {
     return this.http.get<JobDTO[]>(`${this.apiUrl}/recent?page=${page}&size=${size}`);
   }
 
@@ -120,97 +125,43 @@ export class FileGenerationService {
    */
   public downloadFile(jobId: string): Observable<boolean> {
     return new Observable<boolean>(observer => {
-      // First, get the file information
-      this.http.get(`${this.apiUrl}/info/${jobId}`).subscribe({
-        next: (fileInfo: any) => {
-          // Then download the file with proper headers
-          this.http.get(`${this.apiUrl}/download/${jobId}`, {
-            responseType: 'blob',
-            observe: 'response'
-          }).subscribe({
-            next: (response: HttpResponse<Blob>) => {
-              // Extract filename from Content-Disposition header or use a default
-              let filename = 'report.csv';
-              const contentDisposition = response.headers.get('Content-Disposition');
-              if (contentDisposition) {
-                const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
-                if (matches != null && matches[1]) {
-                  filename = matches[1].replace(/['"]/g, '');
-                }
-              } else if (fileInfo && fileInfo.fileName) {
-                filename = fileInfo.fileName;
-              }
-
-              // Create a blob url
-              const blob = response.body;
-              if (!blob) {
-                observer.error('No file content received');
-                return;
-              }
-
-              // Set content type if available
-              const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
-              const blobWithType = new Blob([blob], { type: contentType });
-
-              // Create download link and trigger download
-              this.saveFile(blobWithType, filename);
-              observer.next(true);
-              observer.complete();
-            },
-            error: (err) => {
-              console.error('Error downloading file', err);
-              observer.error(err);
+      // Get the file with proper headers for direct download
+      this.http.get(`${this.apiUrl}/download/${jobId}`, {
+        responseType: 'blob',
+        observe: 'response'
+      }).subscribe({
+        next: (response: HttpResponse<Blob>) => {
+          // Extract filename from Content-Disposition header or use a default
+          let filename = `report-${jobId}.csv`;
+          const contentDisposition = response.headers.get('Content-Disposition');
+          if (contentDisposition) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+            if (matches != null && matches[1]) {
+              filename = matches[1].replace(/['"]/g, '');
             }
-          });
-        },
-        error: (err) => {
-          console.error('Error getting file info', err);
+          }
 
-          // Fallback to direct download if file info fails
-          this.downloadFileDirectly(jobId);
+          // Create a blob URL
+          const blob = response.body;
+          if (!blob) {
+            observer.error('No file content received');
+            return;
+          }
+
+          // Set content type if available
+          const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
+          const blobWithType = new Blob([blob], { type: contentType });
+
+          // Create download link and trigger download
+          this.saveFile(blobWithType, filename);
           observer.next(true);
           observer.complete();
+        },
+        error: (err) => {
+          console.error('Error downloading file', err);
+          observer.error(err);
         }
       });
-    });
-  }
-
-  /**
-   * Fallback method to download directly without info endpoint
-   */
-  private downloadFileDirectly(jobId: string): void {
-    this.http.get(`${this.apiUrl}/download/${jobId}`, {
-      responseType: 'blob',
-      observe: 'response'
-    }).subscribe({
-      next: (response: HttpResponse<Blob>) => {
-        // Extract filename from Content-Disposition header or use a default
-        let filename = `report-${jobId}.csv`;
-        const contentDisposition = response.headers.get('Content-Disposition');
-        if (contentDisposition) {
-          const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
-          if (matches != null && matches[1]) {
-            filename = matches[1].replace(/['"]/g, '');
-          }
-        }
-
-        // Create a blob url
-        const blob = response.body;
-        if (!blob) {
-          console.error('No file content received');
-          return;
-        }
-
-        // Set content type if available
-        const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
-        const blobWithType = new Blob([blob], { type: contentType });
-
-        // Create download link and trigger download
-        this.saveFile(blobWithType, filename);
-      },
-      error: (err) => {
-        console.error('Error downloading file directly', err);
-      }
     });
   }
 

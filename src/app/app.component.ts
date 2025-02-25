@@ -22,35 +22,33 @@ import { AuthService } from './auth/auth.service';
     MenubarModule,
     ButtonModule,
     ToastModule,
-    AvatarModule
+    AvatarModule,
   ],
   providers: [MessageService],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
-  title = 'File Management System';
-  menuItems: MenuItem[] = [];
+  public title = 'File Management System';
+  public menuItems: MenuItem[] = [];
 
   constructor(
     public authService: AuthService
   ) {}
 
-  ngOnInit() {
-    console.log('App component initializing...');
-
-    // Check if already logged in and update UI
+  public ngOnInit(): void {
     this.updateMenu();
   }
 
-  updateMenu() {
+  public updateMenu(): void {
     const isLoggedIn = this.authService.loggedIn();
 
     this.menuItems = [
       {
         label: 'Home',
         icon: 'pi pi-home',
-        routerLink: ['/']
+        routerLink: ['/'],
+        routerLinkActiveOptions: { exact: true }
       }
     ];
 
@@ -59,7 +57,8 @@ export class AppComponent implements OnInit {
         {
           label: 'File Management',
           icon: 'pi pi-file',
-          routerLink: ['/file-management']
+          routerLink: ['/file-management'],
+          routerLinkActiveOptions: { exact: true }
         },
         {
           label: 'User',
@@ -88,7 +87,7 @@ export class AppComponent implements OnInit {
     }
   }
 
-  logout() {
+  public logout(): void {
     this.authService.logout();
   }
 }

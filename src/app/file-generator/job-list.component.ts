@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 // PrimeNG Imports
@@ -7,9 +7,10 @@ import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { CardModule } from 'primeng/card';
-import {JobDTO, JobStatus} from './file-generation.models';
-import {FileTypePipe} from './file-type.pipe';
-import {JobStatusPipe} from './job-status.pipe';
+import { SkeletonModule } from 'primeng/skeleton';
+import { JobDTO, JobStatus } from './file-generation.models';
+import { FileTypePipe } from './file-type.pipe';
+import { JobStatusPipe } from './job-status.pipe';
 
 @Component({
   selector: 'app-job-list',
@@ -21,11 +22,13 @@ import {JobStatusPipe} from './job-status.pipe';
     ButtonModule,
     TooltipModule,
     CardModule,
+    SkeletonModule,
     FileTypePipe,
     JobStatusPipe
   ],
   templateUrl: './job-list.component.html',
-  styleUrls: ['./job-list.component.scss']
+  styleUrls: ['./job-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class JobListComponent {
   @Input() public jobs: JobDTO[] = [];
@@ -70,5 +73,10 @@ export class JobListComponent {
 
   public onRefreshClicked(): void {
     this.refresh.emit();
+  }
+
+  // Track by function for optimized rendering
+  public trackByJobId(index: number, job: JobDTO): string {
+    return job.jobId;
   }
 }

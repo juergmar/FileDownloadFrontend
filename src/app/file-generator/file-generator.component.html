@@ -2,23 +2,30 @@
   <p-toast></p-toast>
   <p-confirmDialog header="Confirmation" icon="pi pi-exclamation-triangle"></p-confirmDialog>
 
-  <app-file-generator-form
-    (generateFile)="onGenerateFile($event)">
-  </app-file-generator-form>
+  <div class="content-section">
+    <div class="form-section">
+      <app-file-generator-form
+        (generateFile)="onGenerateFile($event)">
+      </app-file-generator-form>
+    </div>
 
-  <app-job-list
-    [jobs]="recentJobs"
-    [loading]="loading"
-    (download)="onDownloadFile($event)"
-    (cancel)="onCancelJob($event)"
-    (retry)="onRetryJob($event)"
-    (refresh)="onJobsRefresh()">
-  </app-job-list>
+    <div class="jobs-section">
+      <app-job-list
+        [jobs]="recentJobs"
+        [loading]="loading"
+        (download)="onDownloadFile($event)"
+        (cancel)="onCancelJob($event)"
+        (retry)="onRetryJob($event)"
+        (refresh)="onJobsRefresh()">
+      </app-job-list>
+    </div>
+  </div>
 
-  <!-- Processing Dialog Component -->
+  <!-- Processing Dialog Component - Modified to handle dialog closed event -->
   <app-processing-dialog
     [(visible)]="showProcessingDialog"
     [job]="currentProcessingJob"
-    (download)="downloadCurrentProcessingFile()">
+    (download)="downloadCurrentProcessingFile()"
+    (dialogClosed)="onProcessingDialogClosed()">
   </app-processing-dialog>
 </div>

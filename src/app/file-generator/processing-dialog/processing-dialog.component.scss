@@ -45,12 +45,43 @@
   }
 }
 
+.status-update-info {
+  margin-top: 1rem;
+  text-align: center;
+  color: var(--text-color-secondary);
+  font-size: 0.9rem;
+}
+
 // Style overrides for PrimeNG progress spinner
 :host ::ng-deep {
   .custom-spinner {
     .p-progress-spinner-circle {
       stroke: var(--primary-color, #007bff);
       stroke-dasharray: 89, 200;
+    }
+  }
+
+  .p-dialog {
+    box-shadow: 0 11px 15px -7px rgba(0, 0, 0, 0.2),
+    0 24px 38px 3px rgba(0, 0, 0, 0.14),
+    0 9px 46px 8px rgba(0, 0, 0, 0.12);
+
+    .p-dialog-header {
+      border-bottom: 1px solid #e0e0e0;
+
+      .p-dialog-title {
+        font-weight: 600;
+      }
+    }
+
+    .p-dialog-content {
+      padding-bottom: 1.5rem;
+    }
+
+    .p-dialog-footer {
+      border-top: 1px solid #e0e0e0;
+      padding: 1rem;
+      text-align: right;
     }
   }
 }

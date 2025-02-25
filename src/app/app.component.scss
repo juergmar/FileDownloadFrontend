@@ -1,12 +1,27 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 .app-header {
   background-color: #ffffff;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0.5rem 0;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+  }
 
   .header-content {
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
-    padding: 0 1rem;
+    padding: 0 1.5rem;
 
     .logo-container {
       display: flex;
@@ -44,14 +59,94 @@
       }
     }
   }
+}
 
-  :host ::ng-deep .p-menubar {
-    padding: 0.5rem 0;
-    border: none;
-    background-color: transparent;
+:host ::ng-deep .p-menubar {
+  padding: 0.5rem 0;
+  border: none;
+  background-color: transparent;
 
-    .p-menuitem-link {
-      padding: 0.75rem 1rem;
+  .p-menubar-root-list {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto;
+  }
+
+  .p-menuitem {
+    position: relative;
+
+    &:after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background-color: var(--primary-color);
+      transition: all 0.3s ease;
+      transform: translateX(-50%);
     }
+
+    &:hover:after {
+      width: 70%;
+    }
+  }
+
+  .p-menuitem-link {
+    padding: 0.75rem 1.25rem;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.03);
+    }
+
+    .p-menuitem-icon {
+      margin-right: 0.5rem;
+      color: var(--primary-color);
+    }
+
+    .p-menuitem-text {
+      font-weight: 500;
+    }
+  }
+
+  .p-menuitem-active {
+    > .p-menuitem-link {
+      background-color: rgba(0, 0, 0, 0.03);
+
+      .p-menuitem-text {
+        color: var(--primary-color);
+        font-weight: 600;
+      }
+    }
+
+    &:after {
+      width: 70%;
+    }
+  }
+}
+
+.app-content {
+  flex: 1;
+  width: 100%;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+}
+
+.app-footer {
+  background-color: #ffffff;
+  padding: 1rem 0;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+
+  .footer-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 1.5rem;
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.9rem;
   }
 }

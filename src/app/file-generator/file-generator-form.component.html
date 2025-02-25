@@ -1,7 +1,7 @@
 <p-card header="Generate File">
   <div class="p-fluid">
     <div class="p-field mb-3">
-      <label for="fileType">Report Type</label>
+      <label for="fileType" class="form-label">Report Type</label>
       <p-select id="fileType" [options]="fileTypes" [(ngModel)]="selectedFileType"
                 optionLabel="label" optionValue="value" [disabled]="isGenerating"
                 class="w-full"></p-select>
@@ -11,6 +11,7 @@
       <p-button
         label="Generate Report"
         icon="pi pi-file"
+        styleClass="w-full"
         [disabled]="isGenerating"
         (onClick)="openParametersDialog()"
       ></p-button>
@@ -18,20 +19,19 @@
   </div>
 </p-card>
 
-<!-- Parameters Dialog -->
 <p-dialog
   header="Report Parameters"
   [(visible)]="showParametersDialog"
   [modal]="true"
   [style]="{width: '450px'}"
+  [closeOnEscape]="true"
   [closable]="true"
   [draggable]="false"
 >
   <div class="p-fluid">
     <ng-container [ngSwitch]="selectedFileType">
-      <!-- User Activity Report Parameters -->
       <div *ngSwitchCase="'USER_ACTIVITY_REPORT'" class="p-field">
-        <label for="timespan">Time Span (days)</label>
+        <label for="timespan" class="form-label">Time Span (days)</label>
         <input
           type="number"
           id="timespan"
@@ -43,9 +43,8 @@
         />
       </div>
 
-      <!-- Custom Report Parameters -->
       <div *ngSwitchCase="'CUSTOM_REPORT'" class="p-field">
-        <label for="reportName">Report Name</label>
+        <label for="reportName" class="form-label">Report Name</label>
         <input
           type="text"
           id="reportName"
@@ -55,7 +54,6 @@
         />
       </div>
 
-      <!-- Default message for other report types -->
       <div *ngSwitchDefault class="p-field">
         <p>No additional parameters needed for this report type.</p>
       </div>

@@ -1,13 +1,16 @@
 <p-dialog
   [(visible)]="visible"
   [modal]="true"
-  [closable]="shouldShowCloseButton()"
-  [closeOnEscape]="shouldShowCloseButton()"
+  [closable]="!isProcessing()"
+  [closeOnEscape]="!isProcessing()"
   [draggable]="false"
   [resizable]="false"
   [style]="{width: '400px'}"
-  header="Processing Report">
+  [baseZIndex]="1000"
+  header="Processing Report"
+  (onHide)="handleDialogHide()">
 
+  <!-- Rest of dialog content remains the same -->
   <div class="processing-container">
     <!-- Status icon -->
     <div class="status-icon" [ngClass]="{'animate-completion': job?.status === JobStatus.COMPLETED}">
@@ -40,7 +43,7 @@
     </div>
   </div>
 
-  <div class="status-update-info" *ngIf="job?.status === JobStatus.PENDING || job?.status === JobStatus.IN_PROGRESS">
+  <div class="status-update-info" *ngIf="isProcessing()">
     <p>
       <small>Last checked: {{ lastStatusCheckTime | date:'medium' }}</small>
       <span *ngIf="isCheckingStatus" class="ml-2">
@@ -50,11 +53,12 @@
   </div>
 
   <ng-template pTemplate="footer">
+    <!-- Close button only appears when processing is complete -->
     <p-button
       *ngIf="shouldShowCloseButton()"
       label="Close"
       icon="pi pi-times"
-      (onClick)="visibleChange.emit(false)">
+      (onClick)="closeDialog()">
     </p-button>
 
     <p-button

@@ -1,24 +1,88 @@
 :host {
   display: block;
+  margin-bottom: 1rem;
+
+  .p-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .p-card-content {
+    flex: 1;
+    padding: 0;
+    overflow: hidden;
+  }
 
   .jobs-header {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 1rem;
+    padding: 0 1rem;
+
+    .header-title {
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+  }
+
+  .jobs-table-container {
+    max-height: 50vh;
+    overflow-y: auto;
+    border-radius: 0.25rem;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
   }
 
   .job-actions {
     display: flex;
     flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .mr-2 {
     margin-right: 0.5rem;
   }
 
+  .ml-2 {
+    margin-left: 0.5rem;
+  }
+
   .text-center {
     text-align: center;
   }
+
+  .skeleton-row {
+    margin-bottom: 0.5rem;
+  }
+
+  .highlight-row {
+    background-color: rgba(144, 202, 249, 0.1);
+    transition: background-color 0.3s ease;
+  }
+}
+
+/* Animation for table updates */
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr {
+  transition: all 0.3s ease;
 }
 
 :host ::ng-deep {
@@ -41,12 +105,42 @@
     }
   }
 
-  p-card .p-card {
+  .p-card {
     .p-card-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 0.5rem;
+    }
+
+    .p-card-content {
+      padding: 0;
+    }
+
+    .p-card-body {
+      padding: 0;
+    }
+  }
+
+  .p-datatable {
+    .p-datatable-header {
+      padding: 0.75rem 1rem;
+      background-color: transparent;
+      border: none;
+    }
+
+    .p-datatable-thead > tr > th {
+      background-color: #f8f9fa;
+      padding: 0.75rem 1rem;
+    }
+
+    .p-datatable-tbody > tr > td {
+      padding: 0.75rem 1rem;
+    }
+
+    .p-paginator {
+      padding: 0.5rem 1rem;
     }
   }
 }
