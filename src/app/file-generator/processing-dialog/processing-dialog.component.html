@@ -40,6 +40,15 @@
     </div>
   </div>
 
+  <div class="status-update-info" *ngIf="job?.status === JobStatus.PENDING || job?.status === JobStatus.IN_PROGRESS">
+    <p>
+      <small>Last checked: {{ lastStatusCheckTime | date:'medium' }}</small>
+      <span *ngIf="isCheckingStatus" class="ml-2">
+        <i class="pi pi-spin pi-spinner" style="font-size: 0.75rem;"></i>
+      </span>
+    </p>
+  </div>
+
   <ng-template pTemplate="footer">
     <p-button
       *ngIf="shouldShowCloseButton()"

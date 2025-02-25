@@ -2,15 +2,9 @@
   <div class="p-fluid">
     <div class="p-field mb-3">
       <label for="fileType">Report Type</label>
-      <p-dropdown
-        id="fileType"
-        [options]="fileTypes"
-        [(ngModel)]="selectedFileType"
-        optionLabel="label"
-        optionValue="value"
-        [disabled]="isGenerating"
-        styleClass="w-full"
-      ></p-dropdown>
+      <p-select id="fileType" [options]="fileTypes" [(ngModel)]="selectedFileType"
+                optionLabel="label" optionValue="value" [disabled]="isGenerating"
+                class="w-full"></p-select>
     </div>
 
     <div class="p-field mt-3">

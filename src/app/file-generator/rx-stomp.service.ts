@@ -9,11 +9,6 @@ import {environment} from '../auth/auth-config';
 
 const DEFAULT_RECONNECT_DELAY = 5000;
 
-export function rxStompServiceFactory(oauthService: OAuthService, csrfService: CsrfService): RxStompService {
-  return new RxStompService(oauthService, csrfService);
-}
-
-
 @Injectable({
   providedIn: 'root'
 })
@@ -33,7 +28,7 @@ export class RxStompService extends RxStomp {
 
   private connect(oauthService: OAuthService, csrf: Csrf): void {
     const reconnectDelay = environment.websocketReconnectDelay ?? DEFAULT_RECONNECT_DELAY;
-    const brokerURL = `${window.location.origin.replace('http', 'ws')}/${environment.resourceServer}/ws`;
+    const brokerURL = environment.apiUrl.replace('http', 'ws') + '/ws';
     this.configure({
       brokerURL,
       reconnectDelay: +reconnectDelay,

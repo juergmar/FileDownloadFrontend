@@ -12,9 +12,10 @@ const localEnvironment = {
 export const environment = {
   ...localEnvironment,
   production: false,
-  resourceServer: 'leno-api/api',
+  resourceServer: '',
   websocketReconnectDelay: 5000,
-  openIdConnectResponseType: 'code'
+  openIdConnectResponseType: 'code',
+  apiUrl: 'http://localhost:8080'
 };
 
 

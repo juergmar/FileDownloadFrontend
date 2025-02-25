@@ -2,12 +2,10 @@
   <p-toast></p-toast>
   <p-confirmDialog header="Confirmation" icon="pi pi-exclamation-triangle"></p-confirmDialog>
 
-  <!-- Generator Form Component -->
   <app-file-generator-form
     (generateFile)="onGenerateFile($event)">
   </app-file-generator-form>
 
-  <!-- Jobs List Component -->
   <app-job-list
     [jobs]="recentJobs"
     [loading]="loading"

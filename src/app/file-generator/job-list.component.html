@@ -8,13 +8,7 @@
     ></p-button>
   </div>
 
-  <p-table
-    [value]="jobs"
-    [loading]="loading"
-    styleClass="p-datatable-sm"
-    [responsive]="true"
-    responsiveLayout="stack"
-  >
+  <p-table [value]="jobs" [loading]="loading" styleClass="p-datatable-sm" responsiveLayout="stack">
     <ng-template pTemplate="header">
       <tr>
         <th>Type</th>

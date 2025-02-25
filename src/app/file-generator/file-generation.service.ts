@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpResponse } from '@angular/common/http';
-import { Observable, Subject, BehaviorSubject, map } from 'rxjs';
+import {Observable, Subject, BehaviorSubject, map, catchError, interval, switchMap, tap} from 'rxjs';
 
 import {
   FileType,
@@ -31,6 +31,40 @@ export class FileGenerationService {
     this.rxStompService.connectionState$.subscribe(state => {
       this.connectionStatusSubject.next(state === RxStompState.OPEN);
     });
+  }
+
+  public pollJobStatus(jobId: string, intervalMs: number = 3000): Observable<JobDTO | null> {
+    return interval(intervalMs).pipe(
+      switchMap(() => this.getJobStatus(jobId)),
+      tap(job => {
+        if (job) {
+
+          const update: WebSocketMessage = {
+            jobId: job.jobId,
+            fileType: job.fileType,
+            status: job.status,
+            progress: job.progress,
+            updatedAt: new Date().toISOString(),
+            fileName: job.fileName,
+            fileSize: job.fileSize,
+            errorMessage: job.failureReason
+          };
+          this.jobUpdatesSubject.next(update);
+        }
+      })
+    );
+  }
+
+  public getJobStatus(jobId: string): Observable<JobDTO | null> {
+    return this.http.get<JobDTO>(`${this.apiUrl}/status/${jobId}`).pipe(
+      catchError(error => {
+        console.error(`Error fetching status for job ${jobId}:`, error);
+        // If the specific endpoint doesn't exist, fallback to get all jobs and filter
+        return this.getRecentJobs().pipe(
+          map(jobs => jobs.find(job => job.jobId === jobId) || null)
+        );
+      })
+    );
   }
 
   /**
