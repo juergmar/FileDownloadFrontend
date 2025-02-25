@@ -1,0 +1,52 @@
+:host {
+  display: block;
+
+  .jobs-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+  }
+
+  .job-actions {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .mr-2 {
+    margin-right: 0.5rem;
+  }
+
+  .text-center {
+    text-align: center;
+  }
+}
+
+:host ::ng-deep {
+  .p-tag {
+    text-transform: capitalize;
+  }
+
+  .p-button.p-button-sm {
+    padding: 0.4rem;
+
+    .p-button-icon {
+      font-size: 0.875rem;
+    }
+  }
+
+  .p-datatable-responsive-stack > .p-datatable-tbody > tr > td {
+    .p-column-title {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+  }
+
+  p-card .p-card {
+    .p-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.5rem;
+    }
+  }
+}

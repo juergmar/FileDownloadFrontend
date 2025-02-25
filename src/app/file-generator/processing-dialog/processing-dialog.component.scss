@@ -1,0 +1,134 @@
+.processing-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  text-align: center;
+
+  .status-icon {
+    margin-bottom: 1.5rem;
+
+    .spinner-container {
+      display: flex;
+      justify-content: center;
+    }
+
+    i {
+      opacity: 0.9;
+    }
+  }
+
+  .status-message {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-color, #212121);
+  }
+
+  .file-info {
+    color: var(--text-color-secondary, #757575);
+    margin-bottom: 1.5rem;
+    font-style: italic;
+    text-transform: capitalize;
+  }
+
+  .error-message {
+    margin-top: 1rem;
+    color: #f44336; // Standard red color
+    padding: 0.5rem;
+    border-radius: 4px;
+    background-color: rgba(244, 67, 54, 0.1); // Lighter red background
+
+    i {
+      margin-right: 0.5rem;
+    }
+  }
+}
+
+// Style overrides for PrimeNG progress spinner
+:host ::ng-deep {
+  .custom-spinner {
+    .p-progress-spinner-circle {
+      stroke: var(--primary-color, #007bff);
+      stroke-dasharray: 89, 200;
+    }
+  }
+}
+
+// Animations
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-icon {
+  position: relative;
+
+  &.animate-completion {
+    &::before, &::after {
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      opacity: 0;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: firework 0.6s ease-out;
+    }
+
+    &::before {
+      background-color: rgba(76, 175, 80, 0.5); // Lighter green color
+      animation-delay: 0.2s;
+    }
+
+    &::after {
+      background-color: rgba(0, 123, 255, 0.5); // Lighter primary color
+      animation-delay: 0.4s;
+    }
+  }
+}
+
+.status-icon i.pi-check-circle {
+  animation: pulse 1s ease-in-out;
+}
+
+@keyframes firework {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+.status-message, .file-info {
+  animation: fadeIn 0.5s ease-out;
+}

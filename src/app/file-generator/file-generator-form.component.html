@@ -1,0 +1,84 @@
+<p-card header="Generate File">
+  <div class="p-fluid">
+    <div class="p-field mb-3">
+      <label for="fileType">Report Type</label>
+      <p-dropdown
+        id="fileType"
+        [options]="fileTypes"
+        [(ngModel)]="selectedFileType"
+        optionLabel="label"
+        optionValue="value"
+        [disabled]="isGenerating"
+        styleClass="w-full"
+      ></p-dropdown>
+    </div>
+
+    <div class="p-field mt-3">
+      <p-button
+        label="Generate Report"
+        icon="pi pi-file"
+        [disabled]="isGenerating"
+        (onClick)="openParametersDialog()"
+      ></p-button>
+    </div>
+  </div>
+</p-card>
+
+<!-- Parameters Dialog -->
+<p-dialog
+  header="Report Parameters"
+  [(visible)]="showParametersDialog"
+  [modal]="true"
+  [style]="{width: '450px'}"
+  [closable]="true"
+  [draggable]="false"
+>
+  <div class="p-fluid">
+    <ng-container [ngSwitch]="selectedFileType">
+      <!-- User Activity Report Parameters -->
+      <div *ngSwitchCase="'USER_ACTIVITY_REPORT'" class="p-field">
+        <label for="timespan">Time Span (days)</label>
+        <input
+          type="number"
+          id="timespan"
+          pInputText
+          [(ngModel)]="parameters['startDate']"
+          min="1"
+          max="365"
+          class="w-full"
+        />
+      </div>
+
+      <!-- Custom Report Parameters -->
+      <div *ngSwitchCase="'CUSTOM_REPORT'" class="p-field">
+        <label for="reportName">Report Name</label>
+        <input
+          type="text"
+          id="reportName"
+          pInputText
+          [(ngModel)]="customReportName"
+          class="w-full"
+        />
+      </div>
+
+      <!-- Default message for other report types -->
+      <div *ngSwitchDefault class="p-field">
+        <p>No additional parameters needed for this report type.</p>
+      </div>
+    </ng-container>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      styleClass="p-button-text"
+      (onClick)="closeParametersDialog()"
+    ></p-button>
+    <p-button
+      label="Generate"
+      icon="pi pi-check"
+      (onClick)="submitGenerateFile()"
+    ></p-button>
+  </ng-template>
+</p-dialog>

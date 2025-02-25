@@ -1,0 +1,26 @@
+<div class="file-generator-container">
+  <p-toast></p-toast>
+  <p-confirmDialog header="Confirmation" icon="pi pi-exclamation-triangle"></p-confirmDialog>
+
+  <!-- Generator Form Component -->
+  <app-file-generator-form
+    (generateFile)="onGenerateFile($event)">
+  </app-file-generator-form>
+
+  <!-- Jobs List Component -->
+  <app-job-list
+    [jobs]="recentJobs"
+    [loading]="loading"
+    (download)="onDownloadFile($event)"
+    (cancel)="onCancelJob($event)"
+    (retry)="onRetryJob($event)"
+    (refresh)="onJobsRefresh()">
+  </app-job-list>
+
+  <!-- Processing Dialog Component -->
+  <app-processing-dialog
+    [(visible)]="showProcessingDialog"
+    [job]="currentProcessingJob"
+    (download)="downloadCurrentProcessingFile()">
+  </app-processing-dialog>
+</div>
