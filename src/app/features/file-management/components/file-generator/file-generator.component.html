@@ -1,0 +1,36 @@
+<div class="file-generator-container">
+  <p-toast></p-toast>
+  <p-confirmDialog header="Confirmation" icon="pi pi-exclamation-triangle"></p-confirmDialog>
+
+  <div class="content-section">
+    <div class="form-section">
+      <app-file-generator-form
+        (generateFile)="onGenerateFile($event)">
+      </app-file-generator-form>
+    </div>
+
+    <div class="jobs-section">
+      <app-job-list
+        (cancel)="onCancelJob($event)"
+        (download)="onDownloadFile($event)"
+        (pageChange)="onPageChange($event)"
+        (refresh)="onJobsRefresh()"
+        (retry)="onRetryJob($event)"
+        [currentPage]="pagination.currentPage"
+        [jobs]="recentJobs"
+        [loading]="loading"
+        [pageSize]="pagination.pageSize"
+        [totalItems]="pagination.totalItems"
+        [totalPages]="pagination.totalPages">
+      </app-job-list>
+    </div>
+  </div>
+
+  <!-- Processing Dialog Component -->
+  <app-processing-dialog
+    (dialogClosed)="onProcessingDialogClosed()"
+    (download)="downloadCurrentProcessingFile()"
+    [(visible)]="showProcessingDialog"
+    [job]="currentProcessingJob">
+  </app-processing-dialog>
+</div>

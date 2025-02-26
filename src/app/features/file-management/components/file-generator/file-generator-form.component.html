@@ -1,0 +1,71 @@
+<p-card header="Generate File">
+  <div class="p-fluid">
+    <div class="p-field mb-3">
+      <label class="form-label" id="reportTypeLabel">Report Type</label>
+      <p-selectButton
+        [(ngModel)]="selectedFileType"
+        [disabled]="isGenerating"
+        [options]="fileTypes"
+        aria-labelledby="reportTypeLabel"
+        class="report-type-selector"
+        id="reportTypeSelect"
+        optionLabel="label"
+        optionValue="value"
+      ></p-selectButton>
+
+      <div class="report-type-description mt-2">
+        {{ getSelectedTypeDescription() }}
+      </div>
+    </div>
+
+    <div class="p-field mt-3">
+      <p-button
+        (onClick)="openParametersDialog()"
+        [disabled]="isGenerating || !selectedFileType"
+        icon="pi pi-cog"
+        label="Configure Report"
+        styleClass="w-full"
+      ></p-button>
+    </div>
+  </div>
+</p-card>
+
+<p-dialog
+  [(visible)]="showParametersDialog"
+  [closable]="true"
+  [closeOnEscape]="true"
+  [draggable]="false"
+  [header]="getDialogHeader()"
+  [modal]="true"
+  [style]="{width: '500px'}"
+>
+  <ng-container [ngSwitch]="selectedFileType">
+    <app-user-activity-report-form
+      (cancel)="closeParametersDialog()"
+      (generate)="onGenerate($event)"
+      *ngSwitchCase="FileType.USER_ACTIVITY_REPORT"
+      [isGenerating]="isGenerating"
+    ></app-user-activity-report-form>
+
+    <app-system-health-report-form
+      (cancel)="closeParametersDialog()"
+      (generate)="onGenerate($event)"
+      *ngSwitchCase="FileType.SYSTEM_HEALTH_REPORT"
+      [isGenerating]="isGenerating"
+    ></app-system-health-report-form>
+
+    <app-file-statistics-report-form
+      (cancel)="closeParametersDialog()"
+      (generate)="onGenerate($event)"
+      *ngSwitchCase="FileType.FILE_STATISTICS_REPORT"
+      [isGenerating]="isGenerating"
+    ></app-file-statistics-report-form>
+
+    <app-custom-report-form
+      (cancel)="closeParametersDialog()"
+      (generate)="onGenerate($event)"
+      *ngSwitchCase="FileType.CUSTOM_REPORT"
+      [isGenerating]="isGenerating"
+    ></app-custom-report-form>
+  </ng-container>
+</p-dialog>

@@ -1,0 +1,112 @@
+<p-card>
+  <ng-template pTemplate="header">
+    <div class="jobs-header">
+      <div class="header-title">Recent Jobs</div>
+      <div class="header-actions">
+        <p-button
+          (onClick)="onRefreshClicked()"
+          [loading]="loading"
+          icon="pi pi-refresh"
+          pTooltip="Refresh job list"
+          styleClass="p-button-outlined p-button-sm"
+        ></p-button>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="jobs-table-container">
+    <p-table [dataKey]="'jobId'" [loading]="loading" [rowTrackBy]="trackByJobId" [value]="jobs"
+             responsiveLayout="stack" styleClass="p-datatable-sm">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Type</th>
+          <th>File Name</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+      <ng-template let-job pTemplate="body">
+        <tr [ngClass]="{'highlight-row': isJobInProgress(job)}">
+          <td>
+            <span class="p-column-title">Type</span>
+            {{ job.fileType | fileType }}
+          </td>
+          <td>
+            <span class="p-column-title">File Name</span>
+            {{ job.fileName || 'Pending...' }}
+          </td>
+          <td>
+            <span class="p-column-title">Status</span>
+            <p-tag
+              [severity]="getStatusSeverity(job.status)"
+              [value]="job.status | jobStatus"
+            ></p-tag>
+            <span *ngIf="job.progress && job.progress < 100" class="ml-2">
+              {{ job.progress }}%
+            </span>
+          </td>
+          <td>
+            <span class="p-column-title">Created</span>
+            {{ job.createdAt | date:'medium' }}
+          </td>
+          <td>
+            <div class="job-actions">
+              <p-button
+                (onClick)="onDownloadClicked(job.jobId)"
+                [disabled]="job.status !== 'COMPLETED'"
+                icon="pi pi-download"
+                pTooltip="Download"
+                styleClass="p-button-success p-button-sm"
+              ></p-button>
+
+              <p-button
+                (onClick)="onCancelClicked(job.jobId)"
+                [disabled]="!isJobInProgress(job)"
+                icon="pi pi-times"
+                pTooltip="Cancel"
+                styleClass="p-button-danger p-button-sm"
+              ></p-button>
+
+              <p-button
+                (onClick)="onRetryClicked(job.jobId)"
+                [disabled]="job.status !== 'FAILED'"
+                icon="pi pi-refresh"
+                pTooltip="Retry"
+                styleClass="p-button-warning p-button-sm"
+              ></p-button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td class="text-center" colspan="5">
+            <div *ngIf="loading; else noJobs">
+              <div *ngFor="let item of [1,2,3]" class="skeleton-row">
+                <p-skeleton height="2.5rem" width="100%"></p-skeleton>
+              </div>
+            </div>
+            <ng-template #noJobs>
+              <div class="empty-state">
+                <i class="pi pi-file-excel" style="font-size: 3rem; color: #DDD; margin-bottom: 1rem;"></i>
+                <p>No recent jobs found</p>
+              </div>
+            </ng-template>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <!-- Paginator -->
+    <div *ngIf="totalItems > 0" class="paginator-container">
+      <p-paginator
+        (onPageChange)="onPageChangeEvent($event)"
+        [first]="currentPage * pageSize"
+        [rowsPerPageOptions]="[5, 10, 20, 50]"
+        [rows]="pageSize"
+        [totalRecords]="totalItems">
+      </p-paginator>
+    </div>
+  </div>
+</p-card>

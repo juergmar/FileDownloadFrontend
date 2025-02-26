@@ -1,0 +1,43 @@
+<div class="home-container">
+  <div class="welcome-section">
+    <h2>Welcome to the File Management System</h2>
+    <p>Generate and download various reports with real-time updates on processing status.</p>
+
+    <div class="actions">
+      <p-button
+        *ngIf="!authService.loggedIn()"
+        icon="pi pi-sign-in"
+        label="Login"
+        routerLink="/login"
+        styleClass="p-button-lg"
+      ></p-button>
+
+      <p-button
+        *ngIf="authService.loggedIn()"
+        icon="pi pi-file"
+        label="Generate Reports"
+        routerLink="/file-management"
+        styleClass="p-button-lg"
+      ></p-button>
+    </div>
+  </div>
+
+  <p-divider></p-divider>
+
+  <div class="features-section">
+    <h3>Features</h3>
+    <div class="feature-cards">
+      <p-card header="Easy Report Generation" subheader="Multiple report types available">
+        <p>Generate different types of reports based on your needs with our simple interface.</p>
+      </p-card>
+
+      <p-card header="Real-time Updates" subheader="Track progress instantly">
+        <p>Get notified in real-time about your report generation status through WebSocket updates.</p>
+      </p-card>
+
+      <p-card header="Secure Access" subheader="Enterprise-grade security">
+        <p>Access your reports securely with OpenID Connect authentication and authorization.</p>
+      </p-card>
+    </div>
+  </div>
+</div>

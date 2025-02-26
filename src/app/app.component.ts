@@ -1,17 +1,14 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import {Component, OnInit} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {RouterOutlet} from '@angular/router';
 
-// PrimeNG Imports
-import { MenubarModule } from 'primeng/menubar';
-import { ButtonModule } from 'primeng/button';
-import { MenuItem } from 'primeng/api';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
-import { AvatarModule } from 'primeng/avatar';
+import {MenubarModule} from 'primeng/menubar';
+import {ButtonModule} from 'primeng/button';
+import {MenuItem, MessageService} from 'primeng/api';
+import {ToastModule} from 'primeng/toast';
+import {AvatarModule} from 'primeng/avatar';
+import {AuthService} from './core/auth/auth.service';
 
-// Auth service
-import { AuthService } from './auth/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -34,7 +31,8 @@ export class AppComponent implements OnInit {
 
   constructor(
     public authService: AuthService
-  ) {}
+  ) {
+  }
 
   public ngOnInit(): void {
     this.updateMenu();
@@ -48,7 +46,7 @@ export class AppComponent implements OnInit {
         label: 'Home',
         icon: 'pi pi-home',
         routerLink: ['/'],
-        routerLinkActiveOptions: { exact: true }
+        routerLinkActiveOptions: {exact: true}
       }
     ];
 
@@ -58,7 +56,7 @@ export class AppComponent implements OnInit {
           label: 'File Management',
           icon: 'pi pi-file',
           routerLink: ['/file-management'],
-          routerLinkActiveOptions: { exact: true }
+          routerLinkActiveOptions: {exact: true}
         },
         {
           label: 'User',

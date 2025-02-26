@@ -1,6 +1,6 @@
-import { Routes } from '@angular/router';
-import { HomeComponent } from './home/home.component';
-import { authGuard } from './auth/auth.guard';
+import {Routes} from '@angular/router';
+import {HomeComponent} from './home/home.component';
+import {authGuard} from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -11,7 +11,7 @@ export const routes: Routes = [
   {
     path: 'file-management',
     loadChildren: () =>
-      import('./file-management-component/file-management.routes').then(m => m.FILE_MANAGEMENT_ROUTES),
+      import('./features/file-management/file-management.routes').then(m => m.FILE_MANAGEMENT_ROUTES),
     canActivate: [authGuard]
   },
   {

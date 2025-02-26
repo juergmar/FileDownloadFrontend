@@ -1,0 +1,75 @@
+<p-dialog
+  (onHide)="handleDialogHide()"
+  [(visible)]="visible"
+  [baseZIndex]="1000"
+  [closable]="!isProcessing()"
+  [closeOnEscape]="!isProcessing()"
+  [draggable]="false"
+  [modal]="true"
+  [resizable]="false"
+  [style]="{width: '400px'}"
+  header="Processing Report">
+
+  <!-- Rest of dialog content remains the same -->
+  <div class="processing-container">
+    <!-- Status icon -->
+    <div [ngClass]="{'animate-completion': job?.status === JobStatus.COMPLETED}" class="status-icon">
+      <!-- Show spinner only for PENDING or IN_PROGRESS states -->
+      <div *ngIf="shouldShowSpinner()" class="spinner-container">
+        <p-progressSpinner
+          [animationDuration]="'.5s'"
+          [strokeWidth]="'8'"
+          [style]="{'width': '80px', 'height': '80px'}"
+          styleClass="custom-spinner"></p-progressSpinner>
+      </div>
+
+      <!-- Show status icon for other states -->
+      <i *ngIf="job?.status === JobStatus.COMPLETED" class="pi pi-check-circle"
+         style="font-size: 3rem; color: #4caf50;"></i>
+      <i *ngIf="job?.status === JobStatus.FAILED" class="pi pi-times-circle"
+         style="font-size: 3rem; color: #f44336;"></i>
+      <i *ngIf="job?.status === JobStatus.CANCELLED" class="pi pi-ban" style="font-size: 3rem; color: #ff9800;"></i>
+    </div>
+
+    <!-- Status message -->
+    <h3 class="status-message">{{ getStatusMessage() }}</h3>
+
+    <!-- File type info if available -->
+    <p *ngIf="job?.fileType" class="file-info">
+      {{ job?.fileType | fileType }}
+    </p>
+
+    <!-- Error message if available -->
+    <div *ngIf="job?.status === JobStatus.FAILED && job?.failureReason" class="error-message">
+      <i class="pi pi-exclamation-triangle"></i> {{ job?.failureReason }}
+    </div>
+  </div>
+
+  <div *ngIf="isProcessing()" class="status-update-info">
+    <p>
+      <small>Last checked: {{ lastStatusCheckTime | date:'medium' }}</small>
+      <span *ngIf="isCheckingStatus" class="ml-2">
+        <i class="pi pi-spin pi-spinner" style="font-size: 0.75rem;"></i>
+      </span>
+    </p>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <!-- Close button only appears when processing is complete -->
+    <p-button
+      (onClick)="closeDialog()"
+      *ngIf="shouldShowCloseButton()"
+      icon="pi pi-times"
+      label="Close">
+    </p-button>
+
+    <p-button
+      (onClick)="download.emit()"
+      *ngIf="shouldShowDownloadButton()"
+      [style]="{'margin-left': '0.5rem'}"
+      icon="pi pi-download"
+      label="Download"
+      styleClass="p-button-success">
+    </p-button>
+  </ng-template>
+</p-dialog>

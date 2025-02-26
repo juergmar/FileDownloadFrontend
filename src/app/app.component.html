@@ -13,7 +13,8 @@
           <div class="user-menu">
             <div *ngIf="authService.loggedIn()" class="greeting">Hallo</div>
             <div *ngIf="authService.loggedIn()" class="user-avatar">
-              <p-avatar icon="pi pi-user" styleClass="mr-2" [style]="{'background-color':'var(--primary-color)', 'color': '#ffffff'}"></p-avatar>
+              <p-avatar [style]="{'background-color':'var(--primary-color)', 'color': '#ffffff'}" icon="pi pi-user"
+                        styleClass="mr-2"></p-avatar>
             </div>
           </div>
         </ng-template>
