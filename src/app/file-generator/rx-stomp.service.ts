@@ -1,11 +1,12 @@
-import {Injectable} from '@angular/core';
-import {RxStomp} from '@stomp/rx-stomp';
-import {Observable, tap} from 'rxjs';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {OAuthService} from 'angular-oauth2-oidc';
-import {Csrf} from './csrf';
-import {CsrfService} from './csrf.service';
-import {environment} from '../auth/auth-config';
+// Modified RxStompService.ts snippet using token query parameter
+import { Injectable } from '@angular/core';
+import { RxStomp } from '@stomp/rx-stomp';
+import { Observable, tap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { OAuthService } from 'angular-oauth2-oidc';
+import { Csrf } from './csrf';
+import { CsrfService } from './csrf.service';
+import { environment } from '../auth/auth-config';
 
 const DEFAULT_RECONNECT_DELAY = 5000;
 
@@ -28,14 +29,15 @@ export class RxStompService extends RxStomp {
 
   private connect(oauthService: OAuthService, csrf: Csrf): void {
     const reconnectDelay = environment.websocketReconnectDelay ?? DEFAULT_RECONNECT_DELAY;
-    const brokerURL = environment.apiUrl.replace('http', 'ws') + '/ws';
+    const token = oauthService.getAccessToken();
+    const brokerURL = `${environment.apiUrl.replace('http', 'ws')}/ws?token=${token}`;
+
     this.configure({
       brokerURL,
       reconnectDelay: +reconnectDelay,
       beforeConnect: (client) => {
         client.configure({
           connectHeaders: {
-            'Authorization': `Bearer ${oauthService.getAccessToken()}`,
             'X-XSRF-TOKEN': csrf.token
           }
         });
@@ -44,5 +46,3 @@ export class RxStompService extends RxStomp {
     this.activate();
   }
 }
-
-
