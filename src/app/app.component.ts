@@ -1,14 +1,14 @@
-import {Component, OnInit} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {RouterOutlet} from '@angular/router';
-
-import {MenubarModule} from 'primeng/menubar';
-import {ButtonModule} from 'primeng/button';
-import {MenuItem, MessageService} from 'primeng/api';
-import {ToastModule} from 'primeng/toast';
-import {AvatarModule} from 'primeng/avatar';
-import {AuthService} from './core/auth/auth.service';
-
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterOutlet } from '@angular/router';
+import { MenubarModule } from 'primeng/menubar';
+import { ButtonModule } from 'primeng/button';
+import { MenuItem, MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
+import { AvatarModule } from 'primeng/avatar';
+import { AuthService } from './core/auth/auth.service';
+import { Subject, takeUntil } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
 
 @Component({
   selector: 'app-root',
@@ -20,22 +20,45 @@ import {AuthService} from './core/auth/auth.service';
     ButtonModule,
     ToastModule,
     AvatarModule,
+    DialogModule,
   ],
   providers: [MessageService],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit {
-  public title = 'File Management System';
+export class AppComponent implements OnInit, OnDestroy {
+  public title: string = 'File Management System';
   public menuItems: MenuItem[] = [];
+  public showSessionExpiryDialog: boolean = false;
+  public username: string = '';
+  private destroy$: Subject<void> = new Subject<void>();
 
-  constructor(
-    public authService: AuthService
-  ) {
-  }
+  public constructor(
+    public authService: AuthService,
+    private messageService: MessageService
+  ) {}
 
   public ngOnInit(): void {
+    // Subscribe to login state changes
+    this.authService.isLoggedIn$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(isLoggedIn => {
+        this.updateMenu();
+
+        if (isLoggedIn) {
+          this.username = this.authService.getUsername();
+        } else {
+          this.username = '';
+        }
+      });
+
+    // Initial menu setup
     this.updateMenu();
+  }
+
+  public ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   public updateMenu(): void {
@@ -46,7 +69,7 @@ export class AppComponent implements OnInit {
         label: 'Home',
         icon: 'pi pi-home',
         routerLink: ['/'],
-        routerLinkActiveOptions: {exact: true}
+        routerLinkActiveOptions: { exact: true }
       }
     ];
 
@@ -56,7 +79,7 @@ export class AppComponent implements OnInit {
           label: 'File Management',
           icon: 'pi pi-file',
           routerLink: ['/file-management'],
-          routerLinkActiveOptions: {exact: true}
+          routerLinkActiveOptions: { exact: true }
         },
         {
           label: 'User',
@@ -79,13 +102,22 @@ export class AppComponent implements OnInit {
         {
           label: 'Login',
           icon: 'pi pi-sign-in',
-          routerLink: ['/login']
+          command: () => this.login()
         }
       );
     }
   }
 
+  public login(): void {
+    this.authService.login();
+  }
+
   public logout(): void {
     this.authService.logout();
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Logged Out',
+      detail: 'You have been successfully logged out'
+    });
   }
 }
