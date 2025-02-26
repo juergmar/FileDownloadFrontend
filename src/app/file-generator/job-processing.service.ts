@@ -67,8 +67,10 @@ export class JobProcessingService implements OnDestroy {
    * @returns Observable with job updates
    */
   public initiateJobProcessing(request: ReportRequest): Observable<JobDTO> {
+    // Create a temporary job with a pending status and temporary ID
+    const temporaryJobId = 'pending-' + Date.now();
     this._currentJob = {
-      jobId: 'pending-' + Date.now(),
+      jobId: temporaryJobId,
       fileType: request.type,
       status: JobStatus.PENDING,
       createdAt: new Date().toISOString(),
@@ -102,14 +104,21 @@ export class JobProcessingService implements OnDestroy {
       .subscribe(response => {
         if (!response) return;
 
+        // Store the temporary ID for removal
+        const oldJobId = this._currentJob?.jobId;
+
         // Update the job with the real ID
         this._currentJob = {
           ...(this._currentJob as JobDTO),
-          jobId: response.jobId
+          jobId: response.jobId,
+          status: JobStatus.IN_PROGRESS // Update status to IN_PROGRESS for real job
         };
 
-        // Emit the updated job
+        // Emit the updated job with a flag indicating it's a real job
         this.jobUpdatesSubject.next(this._currentJob);
+
+        // Send an event to indicate this job update should remove temporary jobs
+        // This will be handled in the component
 
         this.fileGenerationService.subscribeToJobUpdates(response.jobId)
           .pipe(takeUntil(this.destroy$))
@@ -140,9 +149,10 @@ export class JobProcessingService implements OnDestroy {
    * @returns Observable with job updates
    */
   public retryJob(jobId: string, fileType: FileType): Observable<JobDTO> {
-    // Create initial job with pending status
+    // Create a temporary job with a pending-retry ID
+    const temporaryJobId = 'pending-retry-' + Date.now();
     this._currentJob = {
-      jobId: 'pending-retry-' + Date.now(),
+      jobId: temporaryJobId,
       fileType,
       status: JobStatus.PENDING,
       createdAt: new Date().toISOString(),
@@ -176,10 +186,14 @@ export class JobProcessingService implements OnDestroy {
       .subscribe(response => {
         if (!response) return;
 
+        // Store the temporary ID for removal
+        const oldJobId = this._currentJob?.jobId;
+
         // Update job with real ID
         this._currentJob = {
           ...(this._currentJob as JobDTO),
-          jobId: response.jobId
+          jobId: response.jobId,
+          status: JobStatus.IN_PROGRESS // Update status to IN_PROGRESS for real job
         };
 
         // Emit the updated job

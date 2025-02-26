@@ -316,7 +316,17 @@ export class JobListManagerService implements OnDestroy {
    * Add or update a job in the list
    * @param job The job to add or update
    */
-  public addOrUpdateJob(job: JobDTO): void {
+  /**
+   * Add or update a job in the list
+   * @param job The job to add or update
+   * @param isRealJob Whether this is a real job (not a temporary one)
+   */
+  public addOrUpdateJob(job: JobDTO, isRealJob: boolean = false): void {
+    // If this is a real job, remove any temporary jobs first
+    if (isRealJob) {
+      this.removeTemporaryJobs();
+    }
+
     const index = this.jobs.findIndex(j => j.jobId === job.jobId);
 
     if (index > -1) {
@@ -337,4 +347,31 @@ export class JobListManagerService implements OnDestroy {
       this.jobsSubject.next(this.jobs);
     }
   }
+
+
+  /**
+   * Remove a job from the list by ID
+   * @param jobId ID of the job to remove
+   */
+  public removeJob(jobId: string): void {
+    const index = this.jobs.findIndex(job => job.jobId === jobId);
+    if (index > -1) {
+      const updatedJobs = [...this.jobs];
+      updatedJobs.splice(index, 1);
+      this.jobs = updatedJobs;
+      this.jobsSubject.next(this.jobs);
+    }
+  }
+
+  /**
+   * Remove all temporary jobs (jobs with IDs starting with 'pending-')
+   */
+  public removeTemporaryJobs(): void {
+    const updatedJobs = this.jobs.filter(job => !job.jobId.startsWith('pending-'));
+    if (updatedJobs.length !== this.jobs.length) {
+      this.jobs = updatedJobs;
+      this.jobsSubject.next(this.jobs);
+    }
+  }
+
 }

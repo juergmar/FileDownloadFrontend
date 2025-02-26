@@ -100,8 +100,11 @@ export class FileGeneratorComponent implements OnInit, OnDestroy {
         if (job) {
           this.showProcessingDialog = true;
 
+          // Check if this job has a real ID (not a temporary one)
+          const isRealJob = !job.jobId.startsWith('pending-');
+
           // Update the job list
-          this.jobListManagerService.addOrUpdateJob(job);
+          this.jobListManagerService.addOrUpdateJob(job, isRealJob);
         }
       });
   }
