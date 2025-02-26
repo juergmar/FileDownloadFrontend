@@ -5,6 +5,7 @@ import { MessageService } from 'primeng/api';
 
 import { FileGenerationService } from './file-generation.service';
 import { FileType, JobDTO, JobStatus, WebSocketMessage } from './file-generation.models';
+import { ReportRequest } from './report-request.models';
 
 @Injectable()
 export class JobProcessingService implements OnDestroy {
@@ -62,14 +63,13 @@ export class JobProcessingService implements OnDestroy {
 
   /**
    * Initiate processing of a new job
-   * @param fileType Type of file to generate
-   * @param parameters Optional parameters for file generation
+   * @param request The report request containing type and parameters
    * @returns Observable with job updates
    */
-  public initiateJobProcessing(fileType: FileType, parameters?: Record<string, any>): Observable<JobDTO> {
+  public initiateJobProcessing(request: ReportRequest): Observable<JobDTO> {
     this._currentJob = {
       jobId: 'pending-' + Date.now(),
-      fileType,
+      fileType: request.type,
       status: JobStatus.PENDING,
       createdAt: new Date().toISOString(),
       fileDataAvailable: false
@@ -78,7 +78,7 @@ export class JobProcessingService implements OnDestroy {
     // Emit the initial job state
     this.jobUpdatesSubject.next(this._currentJob);
 
-    this.fileGenerationService.generateFile(fileType, parameters)
+    this.fileGenerationService.generateFile(request)
       .pipe(
         takeUntil(this.destroy$),
         catchError(err => {

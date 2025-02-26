@@ -3,10 +3,10 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   FileType,
-  GenerateFileRequest,
-  GenerateFileResponse,
+  JobDTO,
   PagedJobResponse
 } from './file-generation.models';
+import { ReportRequest, GenerateFileResponse } from './report-request.models';
 import { environment } from '../auth/auth-config';
 
 /**
@@ -16,21 +16,16 @@ import { environment } from '../auth/auth-config';
   providedIn: 'root'
 })
 export class FileGeneratorApiService {
-  private readonly apiUrl: string = `${environment.apiUrl}/files`;
+  private readonly apiUrl: string = `${environment.apiUrl}/api/files`;
 
   public constructor(private readonly httpClient: HttpClient) {}
 
   /**
    * Generate a new file
-   * @param fileType The type of file to generate
-   * @param parameters Optional parameters for file generation
+   * @param request The report request containing type and parameters
    * @returns Observable with the job details
    */
-  public generateFile(fileType: FileType, parameters?: Record<string, any>): Observable<GenerateFileResponse> {
-    const request: GenerateFileRequest = {
-      fileType,
-      parameters
-    };
+  public generateFile(request: ReportRequest): Observable<GenerateFileResponse> {
     return this.httpClient.post<GenerateFileResponse>(`${this.apiUrl}/generate`, request);
   }
 

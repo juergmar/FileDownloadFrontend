@@ -17,11 +17,11 @@ import {
 import {
   FileType,
   JobDTO,
-  GenerateFileResponse,
   WebSocketMessage,
   JobSubscriptionRequest,
   PagedJobResponse
 } from './file-generation.models';
+import { ReportRequest, GenerateFileResponse } from './report-request.models';
 import { RxStompService } from './rx-stomp.service';
 import { RxStompState } from '@stomp/rx-stomp';
 import { FileGeneratorApiService } from './file-generator-api.service';
@@ -142,12 +142,11 @@ export class FileGenerationService {
 
   /**
    * Generate a new file
-   * @param fileType Type of file to generate
-   * @param parameters Optional parameters for file generation
+   * @param request The report request containing type and parameters
    * @returns Observable with the job details
    */
-  public generateFile(fileType: FileType, parameters?: Record<string, any>): Observable<GenerateFileResponse> {
-    return this.apiService.generateFile(fileType, parameters);
+  public generateFile(request: ReportRequest): Observable<GenerateFileResponse> {
+    return this.apiService.generateFile(request);
   }
 
   /**

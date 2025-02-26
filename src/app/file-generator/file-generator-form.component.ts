@@ -8,8 +8,18 @@ import {CardModule} from 'primeng/card';
 import {DropdownModule} from 'primeng/dropdown';
 import {DialogModule} from 'primeng/dialog';
 import {FileType} from './file-generation.models';
-import {Select} from 'primeng/select';
-import {InputText} from 'primeng/inputtext';
+import {ReportRequest} from './report-request.models';
+import {UserActivityReportFormComponent} from './user-activity-report-form.component';
+import {SystemHealthReportFormComponent} from './system-health-report-form.component';
+import {FileStatisticsReportFormComponent} from './file-statistics-report-form.component';
+import {CustomReportFormComponent} from './custom-report-form.component';
+import {SelectButton} from 'primeng/selectbutton';
+
+interface ReportTypeOption {
+  label: string;
+  value: FileType;
+  description: string;
+}
 
 @Component({
   selector: 'app-file-generator-form',
@@ -21,64 +31,93 @@ import {InputText} from 'primeng/inputtext';
     CardModule,
     DropdownModule,
     DialogModule,
-    Select,
-    InputText
+    UserActivityReportFormComponent,
+    SystemHealthReportFormComponent,
+    FileStatisticsReportFormComponent,
+    CustomReportFormComponent,
+    SelectButton
   ],
   templateUrl: './file-generator-form.component.html',
   styleUrls: ['./file-generator-form.component.scss']
 })
 export class FileGeneratorFormComponent {
-  @Output() public generateFile = new EventEmitter<{
-    fileType: FileType;
-    parameters?: Record<string, any>;
-  }>();
+  public FileType = FileType; // Expose enum to template
 
-  public fileTypes: Array<{ label: string; value: FileType }> = [
-    { label: 'User Activity Report', value: FileType.USER_ACTIVITY_REPORT },
-    { label: 'System Health Report', value: FileType.SYSTEM_HEALTH_REPORT },
-    { label: 'File Statistics Report', value: FileType.FILE_STATISTICS_REPORT },
-    { label: 'Custom Report', value: FileType.CUSTOM_REPORT }
+  public fileTypes: ReportTypeOption[] = [
+    {
+      label: 'User Activity',
+      value: FileType.USER_ACTIVITY_REPORT,
+      description: 'Generate a report of user activities over a specified time period.'
+    },
+    {
+      label: 'System Health',
+      value: FileType.SYSTEM_HEALTH_REPORT,
+      description: 'Monitor system performance and health metrics.'
+    },
+    {
+      label: 'File Statistics',
+      value: FileType.FILE_STATISTICS_REPORT,
+      description: 'Analyze file usage and storage statistics.'
+    },
+    {
+      label: 'Custom Report',
+      value: FileType.CUSTOM_REPORT,
+      description: 'Create a customized report with specific parameters.'
+    }
   ];
 
   public selectedFileType: FileType = FileType.USER_ACTIVITY_REPORT;
   public showParametersDialog: boolean = false;
-  public parameters: Record<string, any> = {};
   public isGenerating: boolean = false;
 
-  public customReportName: string = '';
+  @Output() public generateFile = new EventEmitter<ReportRequest>();
 
+  /**
+   * Open the parameters dialog for the selected report type
+   */
   public openParametersDialog(): void {
-    this.parameters = {};
-
-    if (this.selectedFileType === FileType.USER_ACTIVITY_REPORT) {
-      this.parameters['startDate'] = '30'; // Default 30 days
-    } else if (this.selectedFileType === FileType.CUSTOM_REPORT) {
-      this.customReportName = '';
+    if (!this.selectedFileType) {
+      return; // Don't open dialog if no file type is selected
     }
-
     this.showParametersDialog = true;
   }
 
+  /**
+   * Close the parameters dialog
+   */
   public closeParametersDialog(): void {
     this.showParametersDialog = false;
   }
 
-  public submitGenerateFile(): void {
-    if (this.selectedFileType === FileType.CUSTOM_REPORT && this.customReportName) {
-      this.parameters['reportName'] = this.customReportName;
-    }
-
+  /**
+   * Handle generate event from child form components
+   * @param request The report request
+   */
+  public onGenerate(request: ReportRequest): void {
     this.isGenerating = true;
     this.showParametersDialog = false;
 
-    this.generateFile.emit({
-      fileType: this.selectedFileType,
-      parameters: this.parameters
-    });
+    this.generateFile.emit(request);
 
     // Reset isGenerating after a short delay
     setTimeout(() => {
       this.isGenerating = false;
     }, 1000);
+  }
+
+  /**
+   * Get the dialog header based on the selected file type
+   */
+  public getDialogHeader(): string {
+    const option = this.fileTypes.find(t => t.value === this.selectedFileType);
+    return option ? `Configure ${option.label} Report` : 'Configure Report';
+  }
+
+  /**
+   * Get the description for the selected report type
+   */
+  public getSelectedTypeDescription(): string {
+    const option = this.fileTypes.find(t => t.value === this.selectedFileType);
+    return option ? option.description : '';
   }
 }
