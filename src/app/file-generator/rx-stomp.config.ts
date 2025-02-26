@@ -11,11 +11,11 @@ export const rxStompConfig: RxStompConfig = {
   },
 
   // How often to send heartbeats, in milliseconds
-  heartbeatIncoming: 4000,
-  heartbeatOutgoing: 4000,
+  heartbeatIncoming: 1000,
+  heartbeatOutgoing: 1000,
 
   // Wait 5 seconds before attempting reconnect
-  reconnectDelay: 5000,
+  reconnectDelay: 2000,
 
   // Optional: log debug messages to console
   debug: (msg: string): void => {

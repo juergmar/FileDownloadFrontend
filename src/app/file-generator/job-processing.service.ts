@@ -8,21 +8,21 @@ import { FileType, JobDTO, JobStatus, WebSocketMessage } from './file-generation
 
 @Injectable()
 export class JobProcessingService implements OnDestroy {
-  private readonly WEBSOCKET_TIMEOUT_MS: number = 30000; // 30 seconds
-  private readonly POLLING_INTERVAL_MS: number = 5000; // Poll every 5 seconds (reduced frequency)
+  private readonly WEBSOCKET_TIMEOUT_MS: number = 30000;
+  private readonly POLLING_INTERVAL_MS: number = 1000;
 
-  private destroy$: Subject<void> = new Subject<void>();
+  private readonly destroy$: Subject<void> = new Subject<void>();
   private pollingSubscription?: Subscription;
   private wsSubscription?: Subscription;
 
   private _currentJob: JobDTO | null = null;
-  private jobUpdatesSubject: Subject<JobDTO> = new Subject<JobDTO>();
+  private readonly jobUpdatesSubject: Subject<JobDTO> = new Subject<JobDTO>();
 
-  public jobUpdates$: Observable<JobDTO> = this.jobUpdatesSubject.asObservable();
+  public readonly jobUpdates$: Observable<JobDTO> = this.jobUpdatesSubject.asObservable();
 
-  constructor(
-    private fileGenerationService: FileGenerationService,
-    private messageService: MessageService
+  public constructor(
+    private readonly fileGenerationService: FileGenerationService,
+    private readonly messageService: MessageService
   ) {
     // Subscribe to WebSocket updates to catch updates for the current job
     this.subscribeToWebSocketUpdates();
@@ -37,6 +37,9 @@ export class JobProcessingService implements OnDestroy {
     this.destroy$.complete();
   }
 
+  /**
+   * Subscribe to WebSocket updates for the current job
+   */
   private subscribeToWebSocketUpdates(): void {
     this.wsSubscription = this.fileGenerationService.jobStatusUpdates$
       .pipe(takeUntil(this.destroy$))
@@ -52,14 +55,18 @@ export class JobProcessingService implements OnDestroy {
             failureReason: message.errorMessage
           };
 
-          // Always emit job updates to keep UI in sync
           this.jobUpdatesSubject.next(this._currentJob);
         }
       });
   }
 
+  /**
+   * Initiate processing of a new job
+   * @param fileType Type of file to generate
+   * @param parameters Optional parameters for file generation
+   * @returns Observable with job updates
+   */
   public initiateJobProcessing(fileType: FileType, parameters?: Record<string, any>): Observable<JobDTO> {
-    // Create initial job with pending status
     this._currentJob = {
       jobId: 'pending-' + Date.now(),
       fileType,
@@ -104,8 +111,17 @@ export class JobProcessingService implements OnDestroy {
         // Emit the updated job
         this.jobUpdatesSubject.next(this._currentJob);
 
-        // First, subscribe for job updates via WebSocket
-        this.fileGenerationService.subscribeToJobUpdates(response.jobId);
+        this.fileGenerationService.subscribeToJobUpdates(response.jobId)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe(success => {
+            if (success) {
+              console.log(`Successfully subscribed to updates for job: ${response.jobId}`);
+            } else {
+              console.warn(`Failed to subscribe via WebSocket, falling back to polling for job: ${response.jobId}`);
+              // Ensure polling starts even if WebSocket subscription fails
+              this.startPolling(response.jobId);
+            }
+          });
 
         // Setup WebSocket timeout as a fallback
         this.setupWebSocketTimeout(response.jobId);
@@ -117,6 +133,12 @@ export class JobProcessingService implements OnDestroy {
     return this.jobUpdates$;
   }
 
+  /**
+   * Retry a failed job
+   * @param jobId ID of the job to retry
+   * @param fileType Type of file to generate
+   * @returns Observable with job updates
+   */
   public retryJob(jobId: string, fileType: FileType): Observable<JobDTO> {
     // Create initial job with pending status
     this._currentJob = {
@@ -164,13 +186,20 @@ export class JobProcessingService implements OnDestroy {
         this.jobUpdatesSubject.next(this._currentJob);
 
         // Subscribe for job updates
-        this.fileGenerationService.subscribeToJobUpdates(response.jobId);
+        this.fileGenerationService.subscribeToJobUpdates(response.jobId)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe(success => {
+            if (success) {
+              console.log(`Successfully subscribed to updates for retry job: ${response.jobId}`);
+            } else {
+              console.warn(`Failed to subscribe via WebSocket, falling back to polling for retry job: ${response.jobId}`);
+              // Ensure polling starts even if WebSocket subscription fails
+              this.startPolling(response.jobId);
+            }
+          });
 
         // Setup WebSocket timeout as a fallback
         this.setupWebSocketTimeout(response.jobId);
-
-        // Start polling as additional backup
-        this.startPolling(response.jobId);
 
         this.messageService.add({
           severity: 'info',
@@ -182,6 +211,10 @@ export class JobProcessingService implements OnDestroy {
     return this.jobUpdates$;
   }
 
+  /**
+   * Set up a timeout for WebSocket updates
+   * @param jobId ID of the job to monitor
+   */
   private setupWebSocketTimeout(jobId: string): void {
     let updatesReceived = false;
 
@@ -211,6 +244,10 @@ export class JobProcessingService implements OnDestroy {
       });
   }
 
+  /**
+   * Start polling for job status
+   * @param jobId ID of the job to poll
+   */
   private startPolling(jobId: string): void {
     this.stopPolling();
 
@@ -254,6 +291,9 @@ export class JobProcessingService implements OnDestroy {
       });
   }
 
+  /**
+   * Stop polling for job status
+   */
   private stopPolling(): void {
     if (this.pollingSubscription) {
       this.pollingSubscription.unsubscribe();

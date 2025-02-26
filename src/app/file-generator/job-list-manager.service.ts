@@ -1,10 +1,10 @@
-import {Injectable, OnDestroy} from '@angular/core';
-import {BehaviorSubject, Observable, Subject, Subscription, timer} from 'rxjs';
-import {takeUntil} from 'rxjs/operators';
-import {MessageService} from 'primeng/api';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Observable, Subject, Subscription, timer } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { MessageService } from 'primeng/api';
 
-import {FileGenerationService} from './file-generation.service';
-import {JobDTO, JobStatus, WebSocketMessage} from './file-generation.models';
+import { FileGenerationService } from './file-generation.service';
+import { JobDTO, JobStatus, WebSocketMessage } from './file-generation.models';
 
 export interface JobPagination {
   currentPage: number;
@@ -16,10 +16,10 @@ export interface JobPagination {
 @Injectable()
 export class JobListManagerService implements OnDestroy {
   private jobs: JobDTO[] = [];
-  private destroy$: Subject<void> = new Subject<void>();
-  private jobsSubject: BehaviorSubject<JobDTO[]> = new BehaviorSubject<JobDTO[]>([]);
-  private loadingSubject: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-  private paginationSubject: BehaviorSubject<JobPagination> = new BehaviorSubject<JobPagination>({
+  private readonly destroy$: Subject<void> = new Subject<void>();
+  private readonly jobsSubject: BehaviorSubject<JobDTO[]> = new BehaviorSubject<JobDTO[]>([]);
+  private readonly loadingSubject: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  private readonly paginationSubject: BehaviorSubject<JobPagination> = new BehaviorSubject<JobPagination>({
     currentPage: 0,
     pageSize: 10,
     totalItems: 0,
@@ -31,13 +31,13 @@ export class JobListManagerService implements OnDestroy {
   private readonly LOADING_MIN_DURATION: number = 300;
   private refreshSubscription?: Subscription;
 
-  public jobs$: Observable<JobDTO[]> = this.jobsSubject.asObservable();
-  public loading$: Observable<boolean> = this.loadingSubject.asObservable();
-  public pagination$: Observable<JobPagination> = this.paginationSubject.asObservable();
+  public readonly jobs$: Observable<JobDTO[]> = this.jobsSubject.asObservable();
+  public readonly loading$: Observable<boolean> = this.loadingSubject.asObservable();
+  public readonly pagination$: Observable<JobPagination> = this.paginationSubject.asObservable();
 
-  constructor(
-    private fileGenerationService: FileGenerationService,
-    private messageService: MessageService
+  public constructor(
+    private readonly fileGenerationService: FileGenerationService,
+    private readonly messageService: MessageService
   ) {
     this.subscribeToJobUpdates();
     this.startAutoRefresh();
@@ -126,6 +126,7 @@ export class JobListManagerService implements OnDestroy {
 
   /**
    * Smart update of jobs to preserve UI state when possible
+   * @param newJobs New jobs to merge with existing jobs
    */
   private smartUpdateJobs(newJobs: JobDTO[]): void {
     // Create a map of existing jobs for easy lookup
@@ -150,6 +151,9 @@ export class JobListManagerService implements OnDestroy {
     this.jobsSubject.next(this.jobs);
   }
 
+  /**
+   * Start automatic refresh of job list
+   */
   private startAutoRefresh(): void {
     if (this.refreshSubscription) {
       this.refreshSubscription.unsubscribe();
@@ -189,6 +193,7 @@ export class JobListManagerService implements OnDestroy {
 
   /**
    * Check if there are any active jobs that need more frequent updates
+   * @returns True if there are active jobs
    */
   private hasActiveJobs(): boolean {
     return this.jobs.some(job =>
@@ -199,6 +204,7 @@ export class JobListManagerService implements OnDestroy {
 
   /**
    * Download a file by job ID
+   * @param jobId ID of the job to download
    */
   public downloadFile(jobId: string): void {
     this.fileGenerationService.downloadFile(jobId)
@@ -223,6 +229,7 @@ export class JobListManagerService implements OnDestroy {
 
   /**
    * Cancel a job by ID
+   * @param jobId ID of the job to cancel
    */
   public cancelJob(jobId: string): void {
     this.fileGenerationService.cancelJob(jobId)
@@ -251,6 +258,8 @@ export class JobListManagerService implements OnDestroy {
 
   /**
    * Get a job by its ID
+   * @param jobId ID of the job to find
+   * @returns The job if found, undefined otherwise
    */
   public getJobById(jobId: string): JobDTO | undefined {
     return this.jobs.find(job => job.jobId === jobId);
@@ -258,6 +267,9 @@ export class JobListManagerService implements OnDestroy {
 
   /**
    * Update a job status and details in the job list
+   * @param jobId ID of the job to update
+   * @param status New status for the job
+   * @param update Additional job properties to update
    */
   private updateJobStatus(jobId: string, status: JobStatus, update?: Partial<JobDTO>): void {
     const index = this.jobs.findIndex(j => j.jobId === jobId);
@@ -302,6 +314,7 @@ export class JobListManagerService implements OnDestroy {
 
   /**
    * Add or update a job in the list
+   * @param job The job to add or update
    */
   public addOrUpdateJob(job: JobDTO): void {
     const index = this.jobs.findIndex(j => j.jobId === job.jobId);
