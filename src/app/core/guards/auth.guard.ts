@@ -5,7 +5,7 @@ import { AuthService } from '../auth/auth.service';
 
 /**
  * Guard to protect routes that require authentication
- * Will attempt token refresh if token is invalid
+ * Will initiate login flow if token is invalid
  */
 export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
@@ -16,12 +16,16 @@ export const authGuard: CanActivateFn = (route, state) => {
     return true;
   }
 
+  // Store the return URL and redirect to login
+  localStorage.setItem('authRedirectUrl', state.url);
+
   // Try to refresh token if user has an expired token
   return attemptTokenRefresh(authService, router, state.url);
 };
 
 /**
  * Attempts to refresh token and returns an observable boolean result
+ * Automatically initiates login flow if refresh fails
  */
 function attemptTokenRefresh(
   authService: AuthService,
@@ -35,7 +39,7 @@ function attemptTokenRefresh(
           observer.next(true);
           observer.complete();
         } else {
-          // Store the return URL and redirect to login
+          // Login error, initiate login flow
           localStorage.setItem('authRedirectUrl', returnUrl);
           authService.login();
           observer.next(false);
@@ -43,7 +47,7 @@ function attemptTokenRefresh(
         }
       })
       .catch(() => {
-        // Login error, redirect to login
+        // Login error, initiate login flow
         localStorage.setItem('authRedirectUrl', returnUrl);
         authService.login();
         observer.next(false);

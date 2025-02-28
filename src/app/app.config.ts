@@ -10,6 +10,8 @@ import { providePrimeNG } from 'primeng/config';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { authConfig } from './core/auth/auth-config';
 import { MessageService } from 'primeng/api';
+import { RxStompService } from './core/services/rx-stomp.service';
+import { AutoLoginService } from './core/auth/auto-login.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -19,36 +21,31 @@ export const appConfig: ApplicationConfig = {
     providePrimeNG({ theme: { preset: Aura } }),
     {provide: AuthConfig, useValue: authConfig},
     {provide: MessageService, useClass: MessageService}, // Global message service
+    {provide: 'RxStompService', useExisting: RxStompService}, // Important: Provide as string token for lazy lookup
 
-    // Ensure OAuth is initialized before the app starts
-    provideAppInitializer(() => {
+    provideAppInitializer(async () => {
       const oauthService = inject(OAuthService);
 
-      // Configure OAuth properly
       oauthService.configure(authConfig);
 
-      // First, load the discovery document
-      return oauthService.loadDiscoveryDocument()
-        .then(() => {
-          // Then try login with existing tokens
-          return oauthService.tryLogin();
-        })
-        .then(() => {
-          // Setup silent refresh if user is already logged in
-          if (oauthService.hasValidAccessToken()) {
-            oauthService.setupAutomaticSilentRefresh();
-          }
-
-          // Complete initialization
-          return Promise.resolve();
-        })
-        .catch(error => {
-          console.error('Error during OAuth initialization:', error);
-          return Promise.resolve(); // Don't block app startup on errors
-        });
+      try {
+        await oauthService.loadDiscoveryDocument();
+        await oauthService.tryLogin();
+        if (oauthService.hasValidAccessToken()) {
+          oauthService.setupAutomaticSilentRefresh();
+        }
+        return await Promise.resolve();
+      } catch (error) {
+        console.error('Error during OAuth initialization:', error);
+        return await Promise.resolve();
+      }
     }),
 
-    // Import OAuth module with configuration
+    provideAppInitializer(() => {
+      const autoLoginService = inject(AutoLoginService);
+      return autoLoginService.initializeAutoLogin();
+    }),
+
     importProvidersFrom(
       OAuthModule.forRoot({
         resourceServer: {

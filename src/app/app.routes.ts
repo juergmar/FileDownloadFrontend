@@ -30,7 +30,8 @@ export function oauthCallbackHandler(): Promise<boolean> {
 export const routes: Routes = [
   {
     path: '',
-    component: HomeComponent
+    component: HomeComponent,
+    canActivate: [authGuard] // Add auth guard to home route
   },
   {
     path: 'file-management',
@@ -39,7 +40,7 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    // OAuth callback route
+    // OAuth callback route - this needs to remain accessible without auth
     path: 'callback',
     component: HomeComponent,
     resolve: { callback: () => oauthCallbackHandler() }

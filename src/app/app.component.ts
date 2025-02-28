@@ -39,6 +39,11 @@ export class AppComponent implements OnInit, OnDestroy {
   ) {}
 
   public ngOnInit(): void {
+    // Auto-login if not authenticated
+    if (!this.authService.loggedIn()) {
+      this.authService.login();
+    }
+
     // Subscribe to login state changes
     this.authService.isLoggedIn$
       .pipe(takeUntil(this.destroy$))
@@ -49,6 +54,8 @@ export class AppComponent implements OnInit, OnDestroy {
           this.username = this.authService.getUsername();
         } else {
           this.username = '';
+          // Auto-login when logged out
+          this.authService.login();
         }
       });
 
@@ -97,19 +104,8 @@ export class AppComponent implements OnInit, OnDestroy {
           ]
         }
       );
-    } else {
-      this.menuItems.push(
-        {
-          label: 'Login',
-          icon: 'pi pi-sign-in',
-          command: () => this.login()
-        }
-      );
     }
-  }
-
-  public login(): void {
-    this.authService.login();
+    // Login button has been removed
   }
 
   public logout(): void {
@@ -119,5 +115,9 @@ export class AppComponent implements OnInit, OnDestroy {
       summary: 'Logged Out',
       detail: 'You have been successfully logged out'
     });
+    // Auto-login after logout
+    setTimeout(() => {
+      this.authService.login();
+    }, 1000);
   }
 }

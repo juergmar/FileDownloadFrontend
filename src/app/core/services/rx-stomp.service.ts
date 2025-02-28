@@ -1,30 +1,39 @@
-import {DestroyRef, inject, Injectable} from '@angular/core';
-import {RxStomp, RxStompState} from '@stomp/rx-stomp';
-import {from, Observable, of, throwError} from 'rxjs';
-import {catchError, filter, first, map, tap, timeout} from 'rxjs/operators';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {OAuthService} from 'angular-oauth2-oidc';
-import {CsrfService} from './csrf.service';
-import {environment} from '../auth/auth-config';
-import {Csrf} from '../models/csrf';
+import { DestroyRef, inject, Injectable, Injector } from '@angular/core';
+import { RxStomp, RxStompState } from '@stomp/rx-stomp';
+import { from, Observable, of, throwError } from 'rxjs';
+import { catchError, filter, first, map, tap, timeout } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { OAuthService } from 'angular-oauth2-oidc';
+import { CsrfService } from './csrf.service';
+import { environment } from '../auth/auth-config';
+import { Csrf } from '../models/csrf';
 
 const DEFAULT_RECONNECT_DELAY = 5000;
 const CONNECTION_TIMEOUT = 10000;
 
+/**
+ * Service for WebSocket communication using RxStomp
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class RxStompService extends RxStomp {
-  private destroyRef = inject(DestroyRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   private connectionPromise: Promise<boolean> | null = null;
 
-  constructor(private oauthService: OAuthService, private csrfService: CsrfService) {
+  /**
+   * Constructor
+   */
+  public constructor() {
     super();
-    this.initConnection();
+    // Using setTimeout to avoid immediate circular dependency
+    setTimeout(() => this.initConnection(), 0);
   }
 
   /**
    * Check if the WebSocket is currently connected
+   * @returns True if connected
    */
   public isConnected(): boolean {
     return this.connectionState$.getValue() === RxStompState.OPEN;
@@ -32,6 +41,7 @@ export class RxStompService extends RxStomp {
 
   /**
    * Ensure WebSocket connection is established before proceeding
+   * @param timeoutMs Timeout in milliseconds
    * @returns Observable that resolves to true when connected
    */
   public ensureConnected(timeoutMs: number = 5000): Observable<boolean> {
@@ -65,7 +75,11 @@ export class RxStompService extends RxStomp {
    * Initialize the connection
    */
   private initConnection(): void {
-    this.init(this.csrfService, this.oauthService)
+    // Get services from injector to avoid circular dependency
+    const csrfService = this.injector.get(CsrfService);
+    const oauthService = this.injector.get(OAuthService);
+
+    this.init(csrfService, oauthService)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (connected) => {
@@ -79,6 +93,9 @@ export class RxStompService extends RxStomp {
 
   /**
    * Initialize the STOMP connection with CSRF token
+   * @param csrfService CSRF service
+   * @param oauthService OAuth service
+   * @returns Observable boolean indicating if connection was successful
    */
   private init(csrfService: CsrfService, oauthService: OAuthService): Observable<boolean> {
     if (this.connectionPromise) {
@@ -118,6 +135,8 @@ export class RxStompService extends RxStomp {
 
   /**
    * Connect to the WebSocket broker
+   * @param oauthService OAuth service
+   * @param csrf CSRF token
    */
   private connect(oauthService: OAuthService, csrf: Csrf): void {
     const reconnectDelay = environment.websocketReconnectDelay ?? DEFAULT_RECONNECT_DELAY;

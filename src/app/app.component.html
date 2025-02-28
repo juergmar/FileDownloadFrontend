@@ -1,8 +1,6 @@
 <div class="app-container">
-  <!-- Toast for notifications -->
   <p-toast></p-toast>
 
-  <!-- Header with Menubar -->
   <header class="app-header">
     <div class="header-content">
       <div class="logo-container">
@@ -22,19 +20,16 @@
     </div>
   </header>
 
-  <!-- Main Content Area -->
   <main class="app-content">
     <router-outlet></router-outlet>
   </main>
 
-  <!-- Footer -->
   <footer class="app-footer">
     <div class="footer-content">
       <p>&copy; 2024 File Management System. All rights reserved.</p>
     </div>
   </footer>
 
-  <!-- Session Expiry Dialog -->
   <p-dialog
     [(visible)]="showSessionExpiryDialog"
     [modal]="true"
@@ -44,18 +39,18 @@
     header="Session Expiring"
     [style]="{width: '450px'}">
     <div class="session-expiry-content">
-      <i class="pi pi-exclamation-triangle" style="font-size: 2rem; color: var(--orange-500);"></i>
+      <i class="pi pi-exclamation-triangle" style="font-size: 2rem; color: orange;"></i>
       <p>Your session is about to expire due to inactivity.</p>
       <p>Would you like to continue working?</p>
     </div>
     <ng-template pTemplate="footer">
       <button pButton
-              label="Continue Session"
-              icon="pi pi-check"
+              pButtonLabel="Continue Session"
+              pButtonIcon="pi pi-check"
               (click)="showSessionExpiryDialog = false"></button>
       <button pButton
-              label="Logout"
-              icon="pi pi-sign-out"
+              pButtonLabel="Logout"
+              pButtonIcon="pi pi-sign-out"
               class="p-button-secondary ml-2"
               (click)="logout()"></button>
     </ng-template>

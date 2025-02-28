@@ -1,10 +1,9 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, Injector } from '@angular/core';
 import { AuthConfig, OAuthEvent, OAuthService } from 'angular-oauth2-oidc';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, fromEvent } from 'rxjs';
 import { filter, tap } from 'rxjs/operators';
 import { MessageService } from 'primeng/api';
-import { RxStompService } from '../services/rx-stomp.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -12,7 +11,7 @@ export class AuthService {
   private readonly authConfig: AuthConfig = inject(AuthConfig);
   private readonly router: Router = inject(Router);
   private readonly messageService: MessageService = inject(MessageService);
-  private readonly rxStompService: RxStompService = inject(RxStompService);
+  private readonly injector: Injector = inject(Injector);
 
   private readonly isLoggedInSubject: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   public readonly isLoggedIn$: Observable<boolean> = this.isLoggedInSubject.asObservable();
@@ -20,7 +19,11 @@ export class AuthService {
   private tokenExpirationTimer: any;
   private readonly TOKEN_CHECK_INTERVAL = 30000; // 30 seconds
   private readonly TOKEN_MIN_VALIDITY = 60; // 60 seconds
+  private rxStompService: any; // Will be initialized lazily to avoid circular dependency
 
+  /**
+   * Constructor
+   */
   public constructor() {
     this.setupTokenManagement();
     this.setupEventListeners();
@@ -116,8 +119,15 @@ export class AuthService {
       this.oauthService.refreshToken()
         .then(() => {
           console.log('Token refresh successful');
-          // Reconnect WebSocket with new token
-          this.rxStompService.reconnect();
+          // Reconnect WebSocket with new token - using lazy injection
+          if (!this.rxStompService) {
+            // Lazy load RxStompService to avoid circular dependency
+            this.rxStompService = this.injector.get('RxStompService');
+          }
+
+          if (this.rxStompService) {
+            this.rxStompService.reconnect();
+          }
 
           // Reset the timer after a successful refresh
           this.startTokenExpirationTimer();

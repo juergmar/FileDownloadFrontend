@@ -5,15 +5,6 @@
 
     <div class="actions">
       <p-button
-        *ngIf="!authService.loggedIn()"
-        icon="pi pi-sign-in"
-        label="Login"
-        routerLink="/login"
-        styleClass="p-button-lg"
-      ></p-button>
-
-      <p-button
-        *ngIf="authService.loggedIn()"
         icon="pi pi-file"
         label="Generate Reports"
         routerLink="/file-management"
