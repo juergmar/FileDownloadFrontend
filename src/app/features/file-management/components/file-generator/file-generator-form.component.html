@@ -39,33 +39,10 @@
   [modal]="true"
   [style]="{width: '500px'}"
 >
-  <ng-container [ngSwitch]="selectedFileType">
-    <app-user-activity-report-form
-      (cancel)="closeParametersDialog()"
-      (generate)="onGenerate($event)"
-      *ngSwitchCase="FileType.USER_ACTIVITY_REPORT"
-      [isGenerating]="isGenerating"
-    ></app-user-activity-report-form>
-
-    <app-system-health-report-form
-      (cancel)="closeParametersDialog()"
-      (generate)="onGenerate($event)"
-      *ngSwitchCase="FileType.SYSTEM_HEALTH_REPORT"
-      [isGenerating]="isGenerating"
-    ></app-system-health-report-form>
-
-    <app-file-statistics-report-form
-      (cancel)="closeParametersDialog()"
-      (generate)="onGenerate($event)"
-      *ngSwitchCase="FileType.FILE_STATISTICS_REPORT"
-      [isGenerating]="isGenerating"
-    ></app-file-statistics-report-form>
-
-    <app-custom-report-form
-      (cancel)="closeParametersDialog()"
-      (generate)="onGenerate($event)"
-      *ngSwitchCase="FileType.CUSTOM_REPORT"
-      [isGenerating]="isGenerating"
-    ></app-custom-report-form>
-  </ng-container>
+  <app-report-form
+    [reportType]="selectedFileType"
+    [isGenerating]="isGenerating"
+    (generate)="onGenerate($event)"
+    (cancel)="closeParametersDialog()"
+  ></app-report-form>
 </p-dialog>

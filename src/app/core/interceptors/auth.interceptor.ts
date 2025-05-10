@@ -54,10 +54,8 @@ function handleUnauthorized(
   authService: AuthService,
   router: Router
 ) {
-  // Try to refresh the token
   return throwError(() => error).pipe(
     switchMap(() => {
-      // Try refreshing the token
       return new Promise<boolean>((resolve) => {
         authService.refreshTokens()
           .then((refreshed) => resolve(refreshed))
@@ -66,14 +64,12 @@ function handleUnauthorized(
     }),
     switchMap((refreshed) => {
       if (refreshed && authService.loggedIn()) {
-        // Token refreshed successfully, retry with new token
         const newToken = authService.getAccessToken();
         const authReq = req.clone({
           headers: req.headers.set('Authorization', `Bearer ${newToken}`)
         });
         return next(authReq);
       } else {
-        // Token refresh failed, redirect to login
         router.navigate(['/']);
         authService.login();
         return throwError(() => error);

@@ -1,18 +1,13 @@
-import {Component, EventEmitter, Output} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-
-import {ButtonModule} from 'primeng/button';
-import {CardModule} from 'primeng/card';
-import {DropdownModule} from 'primeng/dropdown';
-import {DialogModule} from 'primeng/dialog';
-import {SelectButton} from 'primeng/selectbutton';
-import {ReportRequest} from '../../models/report-request.models';
-import {FileType} from '../../models/file-generation.models';
-import {UserActivityReportFormComponent} from '../report-forms/user-activity-report-form.component';
-import {SystemHealthReportFormComponent} from '../report-forms/system-health-report-form.component';
-import {FileStatisticsReportFormComponent} from '../report-forms/file-statistics-report-form.component';
-import {CustomReportFormComponent} from '../report-forms/custom-report-form.component';
+import { Component, EventEmitter, Output } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { DialogModule } from 'primeng/dialog';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { ReportRequest } from '../../models/report-request.models';
+import { FileType } from '../../models/file-generation.models';
+import {ReportFormComponent} from '../report-form/report-form.component';
 
 interface ReportTypeOption {
   label: string;
@@ -28,19 +23,20 @@ interface ReportTypeOption {
     FormsModule,
     ButtonModule,
     CardModule,
-    DropdownModule,
     DialogModule,
-    UserActivityReportFormComponent,
-    SystemHealthReportFormComponent,
-    FileStatisticsReportFormComponent,
-    CustomReportFormComponent,
-    SelectButton
+    SelectButtonModule,
+    ReportFormComponent
   ],
   templateUrl: './file-generator-form.component.html',
   styleUrls: ['./file-generator-form.component.scss']
 })
 export class FileGeneratorFormComponent {
+  @Output() public generateFile = new EventEmitter<ReportRequest>();
+
   public FileType = FileType;
+  public selectedFileType: FileType = FileType.USER_ACTIVITY_REPORT;
+  public showParametersDialog: boolean = false;
+  public isGenerating: boolean = false;
 
   public fileTypes: ReportTypeOption[] = [
     {
@@ -65,12 +61,6 @@ export class FileGeneratorFormComponent {
     }
   ];
 
-  public selectedFileType: FileType = FileType.USER_ACTIVITY_REPORT;
-  public showParametersDialog: boolean = false;
-  public isGenerating: boolean = false;
-
-  @Output() public generateFile = new EventEmitter<ReportRequest>();
-
   /**
    * Open the parameters dialog for the selected report type
    */
@@ -89,7 +79,7 @@ export class FileGeneratorFormComponent {
   }
 
   /**
-   * Handle generate event from child form components
+   * Handle generate event from child form component
    * @param request The report request
    */
   public onGenerate(request: ReportRequest): void {

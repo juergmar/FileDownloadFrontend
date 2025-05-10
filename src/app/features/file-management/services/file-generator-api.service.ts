@@ -3,7 +3,7 @@ import {HttpClient, HttpResponse} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '../../../core/auth/auth-config';
 import {GenerateFileResponse, ReportRequest} from '../models/report-request.models';
-import {PagedJobResponse} from '../models/file-generation.models';
+import {JobDTO, PagedJobResponse} from '../models/file-generation.models';
 
 /**
  * Service responsible for handling all API requests related to file generation
@@ -34,6 +34,15 @@ export class FileGeneratorApiService {
    */
   public getRecentJobs(page: number = 0, size: number = 10): Observable<PagedJobResponse> {
     return this.httpClient.get<PagedJobResponse>(`${this.apiUrl}/recent?page=${page}&size=${size}`);
+  }
+
+  /**
+   * Get a single job by its ID
+   * @param jobId ID of the job to retrieve
+   * @returns Observable with the job details
+   */
+  public getJob(jobId: string): Observable<JobDTO> {
+    return this.httpClient.get<JobDTO>(`${this.apiUrl}/job/${jobId}`);
   }
 
   /**

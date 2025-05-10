@@ -35,8 +35,9 @@ export const authConfig: AuthConfig = {
   useSilentRefresh: true,
   silentRefreshTimeout: environment.silentRefreshTimeout,
   timeoutFactor: 0.75,
-  sessionChecksEnabled: true,
-  showDebugInformation: !environment.production,
+  // Disable session checks to prevent console spam
+  sessionChecksEnabled: false,
+  showDebugInformation: false, // Set to false to reduce console logs
   clearHashAfterLogin: true,
   nonceStateSeparator: 'semicolon',
   skipIssuerCheck: false, // Ensure issuer validation

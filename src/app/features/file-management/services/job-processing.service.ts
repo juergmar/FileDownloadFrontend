@@ -1,6 +1,6 @@
 import {Injectable, OnDestroy} from '@angular/core';
-import {Observable, of, Subject, Subscription, timer} from 'rxjs';
-import {catchError, finalize, takeUntil, takeWhile} from 'rxjs/operators';
+import {Observable, of, Subject, Subscription} from 'rxjs';
+import {catchError, takeUntil} from 'rxjs/operators';
 import {MessageService} from 'primeng/api';
 
 import {FileGenerationService} from './file-generation.service';
@@ -9,11 +9,7 @@ import {ReportRequest} from '../models/report-request.models';
 
 @Injectable()
 export class JobProcessingService implements OnDestroy {
-  private readonly WEBSOCKET_TIMEOUT_MS: number = 30000;
-  private readonly POLLING_INTERVAL_MS: number = 1000;
-
   private readonly destroy$: Subject<void> = new Subject<void>();
-  private pollingSubscription?: Subscription;
   private wsSubscription?: Subscription;
 
   private _currentJob: JobDTO | null = null;
@@ -29,7 +25,6 @@ export class JobProcessingService implements OnDestroy {
   }
 
   public ngOnDestroy(): void {
-    this.stopPolling();
     if (this.wsSubscription) {
       this.wsSubscription.unsubscribe();
     }
@@ -78,8 +73,6 @@ export class JobProcessingService implements OnDestroy {
       .subscribe(response => {
         if (!response) return;
 
-        const oldJobId = this._currentJob?.jobId;
-
         this._currentJob = {
           ...(this._currentJob as JobDTO),
           jobId: response.jobId,
@@ -88,21 +81,21 @@ export class JobProcessingService implements OnDestroy {
 
         this.jobUpdatesSubject.next(this._currentJob);
 
-
         this.fileGenerationService.subscribeToJobUpdates(response.jobId)
           .pipe(takeUntil(this.destroy$))
           .subscribe(success => {
-            if (success) {
-              console.log(`Successfully subscribed to updates for job: ${response.jobId}`);
-            } else {
-              console.warn(`Failed to subscribe via WebSocket, falling back to polling for job: ${response.jobId}`);
-              this.startPolling(response.jobId);
+            if (!success) {
+              // Inform the user that WebSocket connection failed
+              this.messageService.add({
+                severity: 'warn',
+                summary: 'Connection Issue',
+                detail: 'Unable to receive real-time updates. Please refresh to see job status changes.'
+              });
+
+              // Make a one-time request to get current job status
+              this.fetchCurrentJobStatus(response.jobId);
             }
           });
-
-        this.setupWebSocketTimeout(response.jobId);
-
-        this.startPolling(response.jobId);
       });
 
     return this.jobUpdates$;
@@ -150,8 +143,6 @@ export class JobProcessingService implements OnDestroy {
       .subscribe(response => {
         if (!response) return;
 
-        const oldJobId = this._currentJob?.jobId;
-
         this._currentJob = {
           ...(this._currentJob as JobDTO),
           jobId: response.jobId,
@@ -163,15 +154,17 @@ export class JobProcessingService implements OnDestroy {
         this.fileGenerationService.subscribeToJobUpdates(response.jobId)
           .pipe(takeUntil(this.destroy$))
           .subscribe(success => {
-            if (success) {
-              console.log(`Successfully subscribed to updates for retry job: ${response.jobId}`);
-            } else {
-              console.warn(`Failed to subscribe via WebSocket, falling back to polling for retry job: ${response.jobId}`);
-              this.startPolling(response.jobId);
+            if (!success) {
+              this.messageService.add({
+                severity: 'warn',
+                summary: 'Connection Issue',
+                detail: 'Unable to receive real-time updates. Please refresh to see job status changes.'
+              });
+
+              // Make a one-time request to get current job status
+              this.fetchCurrentJobStatus(response.jobId);
             }
           });
-
-        this.setupWebSocketTimeout(response.jobId);
 
         this.messageService.add({
           severity: 'info',
@@ -206,92 +199,26 @@ export class JobProcessingService implements OnDestroy {
   }
 
   /**
-   * Set up a timeout for WebSocket updates
-   * @param jobId ID of the job to monitor
+   * Fetch current job status once (used when WebSocket fails)
+   * @param jobId The job ID to fetch
    */
-  private setupWebSocketTimeout(jobId: string): void {
-    let updatesReceived = false;
-
-    const subscription = this.fileGenerationService.jobStatusUpdates$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(message => {
-        if (message.jobId === jobId) {
-          updatesReceived = true;
-        }
-      });
-
-    timer(this.WEBSOCKET_TIMEOUT_MS)
+  private fetchCurrentJobStatus(jobId: string): void {
+    this.fileGenerationService.getJob(jobId)
       .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => subscription.unsubscribe())
-      )
-      .subscribe(() => {
-        if (!updatesReceived && this._currentJob?.jobId === jobId) {
-          console.log(`No WebSocket updates received for job ${jobId}. Relying on polling mechanism.`);
-
-          this.messageService.add({
-            severity: 'info',
-            summary: 'Status Update',
-            detail: 'Real-time updates not received. Using backup method for status updates.'
-          });
-        }
-      });
-  }
-
-  /**
-   * Start polling for job status
-   * @param jobId ID of the job to poll
-   */
-  private startPolling(jobId: string): void {
-    this.stopPolling();
-
-    console.log(`Starting to poll for job ${jobId} status every ${this.POLLING_INTERVAL_MS}ms`);
-
-    this.pollingSubscription = this.fileGenerationService.pollJobStatus(jobId, this.POLLING_INTERVAL_MS)
-      .pipe(
-        takeWhile(job => job !== null &&
-            ![JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED].includes(job.status),
-          true),
         takeUntil(this.destroy$),
         catchError(error => {
-          console.error('Error while polling job status:', error);
+          console.error('Error fetching job status:', error);
           return of(null);
-        }),
-        finalize(() => {
-          console.log(`Polling for job ${jobId} has stopped`);
         })
       )
       .subscribe(job => {
-        if (job) {
-          console.log(`Poll update for job ${jobId}: status=${job.status}`);
-
-          if (this._currentJob?.jobId === jobId) {
-            this._currentJob = {
-              ...this._currentJob,
-              ...job
-            };
-
-            if (this._currentJob !== null) {
-              this.jobUpdatesSubject.next(this._currentJob);
-
-              if ([JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED].includes(job.status)) {
-                console.log(`Job ${jobId} reached terminal state ${job.status} (via polling).`);
-                this.stopPolling();
-              }
-            }
-
-          }
+        if (job && this._currentJob?.jobId === jobId) {
+          this._currentJob = {
+            ...this._currentJob,
+            ...job
+          };
+          this.jobUpdatesSubject.next(this._currentJob);
         }
       });
-  }
-
-  /**
-   * Stop polling for job status
-   */
-  private stopPolling(): void {
-    if (this.pollingSubscription) {
-      this.pollingSubscription.unsubscribe();
-      this.pollingSubscription = undefined;
-    }
   }
 }

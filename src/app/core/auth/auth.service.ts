@@ -1,9 +1,9 @@
-import { Injectable, inject, Injector } from '@angular/core';
-import { AuthConfig, OAuthEvent, OAuthService } from 'angular-oauth2-oidc';
-import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, fromEvent } from 'rxjs';
-import { filter, tap } from 'rxjs/operators';
-import { MessageService } from 'primeng/api';
+import {inject, Injectable, Injector} from '@angular/core';
+import {AuthConfig, OAuthEvent, OAuthService} from 'angular-oauth2-oidc';
+import {NavigationEnd, Router} from '@angular/router';
+import {BehaviorSubject, fromEvent, Observable} from 'rxjs';
+import {filter} from 'rxjs/operators';
+import {MessageService} from 'primeng/api';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -17,7 +17,6 @@ export class AuthService {
   public readonly isLoggedIn$: Observable<boolean> = this.isLoggedInSubject.asObservable();
 
   private tokenExpirationTimer: any;
-  private readonly TOKEN_CHECK_INTERVAL = 30000; // 30 seconds
   private readonly TOKEN_MIN_VALIDITY = 60; // 60 seconds
   private rxStompService: any; // Will be initialized lazily to avoid circular dependency
 
@@ -28,6 +27,16 @@ export class AuthService {
     this.setupTokenManagement();
     this.setupEventListeners();
     this.checkLoginStatus();
+    this.setupRouteListener();
+  }
+
+  /**
+   * Initialize the auto-login service
+   * This should be called from APP_INITIALIZER
+   */
+  public initializeAutoLogin(): Promise<boolean> {
+    // Initial authentication check
+    return this.checkAuthentication();
   }
 
   /**
@@ -35,18 +44,15 @@ export class AuthService {
    * @returns Promise<void>
    */
   public login(): Promise<void> {
+    // Store current URL for redirection after login
+    localStorage.setItem('authRedirectUrl', window.location.href);
+
     return this.tryLogin()
       .then(() => {
         if (!this.loggedIn()) {
-          this.oauthService.initLoginFlow(window.location.pathname + window.location.search);
+          this.oauthService.initLoginFlow();
         }
-
         return Promise.resolve();
-      })
-      .then(() => {
-        if (this.oauthService.state) {
-          this.router.navigateByUrl(decodeURIComponent(this.oauthService.state));
-        }
       });
   }
 
@@ -60,7 +66,7 @@ export class AuthService {
     if (this.isLoggedInSubject.getValue() !== isLoggedIn) {
       this.isLoggedInSubject.next(isLoggedIn);
 
-      // If we've just logged in, setup token refresh and monitoring
+      // If we've just logged in, setup token refresh
       if (isLoggedIn) {
         this.startTokenExpirationTimer();
       }
@@ -78,6 +84,9 @@ export class AuthService {
     this.oauthService.logOut();
     this.isLoggedInSubject.next(false);
     this.router.navigate(['/']);
+
+    // Auto-login after logout
+    setTimeout(() => this.login(), 500);
   }
 
   /**
@@ -146,6 +155,39 @@ export class AuthService {
   }
 
   /**
+   * Check if the user is authenticated and redirect to login if not
+   * Skip this check for the callback route
+   */
+  private checkAuthentication(): Promise<boolean> {
+    // Skip login check for callback route
+    if (window.location.href.includes('/callback')) {
+      return Promise.resolve(true);
+    }
+
+    if (!this.loggedIn()) {
+      console.log('User not authenticated, redirecting to login...');
+
+      // Wait a moment to ensure route has settled
+      setTimeout(() => this.login(), 100);
+
+      return Promise.resolve(false);
+    }
+
+    return Promise.resolve(true);
+  }
+
+  /**
+   * Setup route change listener to check authentication
+   */
+  private setupRouteListener(): void {
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.checkAuthentication();
+    });
+  }
+
+  /**
    * Configures token management
    * @returns void
    */
@@ -154,11 +196,7 @@ export class AuthService {
 
     // Configure token refresh parameters
     const refreshConfig = {
-      // Try refreshing tokens when they're at 75% of their lifetime
       timeoutFactor: 0.75,
-
-      // Configure silent refresh to use invisible iframe for OIDC
-      // which is more reliable than XHR-based refresh
       disableSilentRefresh: false,
       silentRefreshTimeout: 5000
     };
@@ -219,7 +257,6 @@ export class AuthService {
     const timeUntilExpiry = expiresAt - now;
 
     // Calculate when we should try to refresh the token
-    // (30 seconds before expiry or halfway through token lifetime, whichever is less)
     const refreshTime = Math.min(
       timeUntilExpiry - (this.TOKEN_MIN_VALIDITY * 1000),
       timeUntilExpiry / 2

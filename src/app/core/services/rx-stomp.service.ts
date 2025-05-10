@@ -1,39 +1,94 @@
-import { DestroyRef, inject, Injectable, Injector } from '@angular/core';
-import { RxStomp, RxStompState } from '@stomp/rx-stomp';
-import { from, Observable, of, throwError } from 'rxjs';
-import { catchError, filter, first, map, tap, timeout } from 'rxjs/operators';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { OAuthService } from 'angular-oauth2-oidc';
-import { CsrfService } from './csrf.service';
-import { environment } from '../auth/auth-config';
-import { Csrf } from '../models/csrf';
+// rx-stomp.service.ts
+import {DestroyRef, inject, Injectable} from '@angular/core';
+import {RxStomp, RxStompState} from '@stomp/rx-stomp';
+import {BehaviorSubject, Observable, of} from 'rxjs';
+import {catchError, filter, first, map, timeout} from 'rxjs/operators';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {OAuthService} from 'angular-oauth2-oidc';
+import {MessageService} from 'primeng/api';
+import {getWebSocketUrl, rxStompConfig} from './rx-stomp.config';
 
-const DEFAULT_RECONNECT_DELAY = 5000;
-const CONNECTION_TIMEOUT = 10000;
+const MAX_RECONNECT_ATTEMPTS = 3;
 
-/**
- * Service for WebSocket communication using RxStomp
- */
 @Injectable({
   providedIn: 'root'
 })
 export class RxStompService extends RxStomp {
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly injector = inject(Injector);
-  private connectionPromise: Promise<boolean> | null = null;
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly oauthService: OAuthService = inject(OAuthService);
+  private readonly messageService: MessageService = inject(MessageService);
+
+  private connectionStatusSubject = new BehaviorSubject<boolean>(false);
+  private reconnectAttempts = 0;
+  private reconnecting = false;
+
+  // Expose the connection status as an observable
+  public connectionStatus$ = this.connectionStatusSubject.asObservable();
+
+  constructor() {
+    super();
+
+    // Initialize the connection
+    this.setupConnection();
+
+    // Subscribe to the token refresh event from OAuth service if available
+    if (this.oauthService['eventsSubject']) {
+      this.oauthService['eventsSubject']
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(event => {
+          if (event.type === 'token_received' || event.type === 'token_refreshed') {
+            console.log('Token refreshed, reconnecting WebSocket...');
+            this.reconnect();
+          }
+        });
+    }
+
+    // Monitor connection state changes
+    this.connectionState$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(state => {
+        const isConnected = state === RxStompState.OPEN;
+        this.connectionStatusSubject.next(isConnected);
+
+        if (isConnected) {
+          console.log('WebSocket connection established');
+          this.reconnectAttempts = 0;
+        } else if (state === RxStompState.CLOSED && !this.reconnecting) {
+          console.warn('WebSocket connection closed');
+          this.handleDisconnection();
+        }
+      });
+  }
 
   /**
-   * Constructor
+   * Setup the initial connection
    */
-  public constructor() {
-    super();
-    // Using setTimeout to avoid immediate circular dependency
-    setTimeout(() => this.initConnection(), 0);
+  private setupConnection(): void {
+    const token = this.oauthService.getAccessToken();
+
+    if (!token) {
+      console.error('No access token available for WebSocket connection');
+      return;
+    }
+
+    // Get the complete WebSocket URL with token
+    const brokerURL = getWebSocketUrl(token);
+    console.log(`Connecting to WebSocket at: ${brokerURL}`);
+
+    try {
+      this.configure({
+        ...rxStompConfig,
+        brokerURL
+      });
+
+      this.activate();
+    } catch (error) {
+      console.error('Error setting up WebSocket connection:', error);
+    }
   }
 
   /**
    * Check if the WebSocket is currently connected
-   * @returns True if connected
    */
   public isConnected(): boolean {
     return this.connectionState$.getValue() === RxStompState.OPEN;
@@ -41,12 +96,15 @@ export class RxStompService extends RxStomp {
 
   /**
    * Ensure WebSocket connection is established before proceeding
-   * @param timeoutMs Timeout in milliseconds
-   * @returns Observable that resolves to true when connected
    */
   public ensureConnected(timeoutMs: number = 5000): Observable<boolean> {
     if (this.isConnected()) {
       return of(true);
+    }
+
+    // If not connected, attempt to reconnect
+    if (this.connectionState$.getValue() === RxStompState.CLOSED) {
+      this.reconnect();
     }
 
     return this.connectionState$.pipe(
@@ -55,124 +113,76 @@ export class RxStompService extends RxStomp {
       timeout(timeoutMs),
       map(() => true),
       catchError(err => {
-        console.error('WebSocket connection timeout:', err);
+        console.warn('WebSocket connection could not be established within timeout period');
         return of(false);
       })
     );
   }
 
   /**
-   * Manually reconnect the WebSocket - useful when auth token changes
+   * Handle a disconnection event
    */
-  public reconnect(): void {
-    this.deactivate().then(() => {
-      this.connectionPromise = null;
-      this.initConnection();
-    });
-  }
-
-  /**
-   * Initialize the connection
-   */
-  private initConnection(): void {
-    // Get services from injector to avoid circular dependency
-    const csrfService = this.injector.get(CsrfService);
-    const oauthService = this.injector.get(OAuthService);
-
-    this.init(csrfService, oauthService)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (connected) => {
-          console.log(`WebSocket connection ${connected ? 'established' : 'failed'}`);
-        },
-        error: (err) => {
-          console.error('WebSocket initialization error:', err);
-        }
+  private handleDisconnection(): void {
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      console.error(`Failed to connect after ${MAX_RECONNECT_ATTEMPTS} attempts`);
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Connection Error',
+        detail: 'Could not establish real-time connection. Please refresh the page.'
       });
-  }
-
-  /**
-   * Initialize the STOMP connection with CSRF token
-   * @param csrfService CSRF service
-   * @param oauthService OAuth service
-   * @returns Observable boolean indicating if connection was successful
-   */
-  private init(csrfService: CsrfService, oauthService: OAuthService): Observable<boolean> {
-    if (this.connectionPromise) {
-      return from(this.connectionPromise);
-    }
-
-    this.connectionPromise = new Promise((resolve) => {
-      csrfService.findCsrfToken()
-        .pipe(
-          takeUntilDestroyed(this.destroyRef),
-          tap((csrf: Csrf) => {
-            this.connect(oauthService, csrf);
-
-            this.connectionState$
-              .pipe(
-                takeUntilDestroyed(this.destroyRef),
-                filter(state => state === RxStompState.OPEN),
-                first(),
-                timeout(CONNECTION_TIMEOUT)
-              )
-              .subscribe({
-                next: () => resolve(true),
-                error: () => resolve(false)
-              });
-          }),
-          catchError(err => {
-            console.error('Failed to get CSRF token:', err);
-            resolve(false);
-            return throwError(() => err);
-          })
-        )
-        .subscribe();
-    });
-
-    return from(this.connectionPromise);
-  }
-
-  /**
-   * Connect to the WebSocket broker
-   * @param oauthService OAuth service
-   * @param csrf CSRF token
-   */
-  private connect(oauthService: OAuthService, csrf: Csrf): void {
-    const reconnectDelay = environment.websocketReconnectDelay ?? DEFAULT_RECONNECT_DELAY;
-    const token = oauthService.getAccessToken();
-
-    if (!token) {
-      console.error('No access token available for WebSocket connection');
       return;
     }
 
-    const brokerURL = `${environment.apiUrl.replace('http', 'ws')}/ws?token=${encodeURIComponent(token)}`;
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * this.reconnectAttempts, 5000);
 
-    this.configure({
-      brokerURL,
-      reconnectDelay: +reconnectDelay,
-      debug: (msg) => {
-        if (environment.production) return;
-        console.debug('[WebSocket]:', msg);
-      },
-      connectHeaders: {
-        'X-XSRF-TOKEN': csrf.token,
-        'Authorization': `Bearer ${token}`
-      },
-      beforeConnect: (client) => {
-        client.configure({
-          connectHeaders: {
-            'X-XSRF-TOKEN': csrf.token,
-            'Authorization': `Bearer ${token}`
-          }
+    console.log(`Attempting reconnect ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${delay}ms`);
+
+    setTimeout(() => {
+      if (!this.isConnected()) {
+        this.reconnect();
+      }
+    }, delay);
+  }
+
+  /**
+   * Manually reconnect the WebSocket
+   */
+  public reconnect(): void {
+    if (this.reconnecting) {
+      return;
+    }
+
+    this.reconnecting = true;
+    console.log('Reconnecting WebSocket...');
+
+    this.deactivate().then(() => {
+      const token = this.oauthService.getAccessToken();
+
+      if (!token) {
+        console.error('No access token available for WebSocket reconnection');
+        this.reconnecting = false;
+        return;
+      }
+
+      const brokerURL = getWebSocketUrl(token);
+      console.log(`Reconnecting to WebSocket at: ${brokerURL}`);
+
+      try {
+        this.configure({
+          ...rxStompConfig,
+          brokerURL
         });
-      },
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000
-    });
 
-    console.log('Activating WebSocket connection...');
-    this.activate();
+        this.activate();
+      } catch (error) {
+        console.error('Error during WebSocket reconnection:', error);
+      } finally {
+        this.reconnecting = false;
+      }
+    }).catch(error => {
+      console.error('Error deactivating WebSocket:', error);
+      this.reconnecting = false;
+    });
   }
 }

@@ -1,44 +1,139 @@
-import {Injectable} from '@angular/core';
-import {BehaviorSubject, catchError, filter, map, Observable, of, Subject, switchMap, tap, timer} from 'rxjs';
-
-
-import {RxStompState} from '@stomp/rx-stomp';
+// file-generation.service.ts
+import {Injectable, NgZone} from '@angular/core';
+import {Observable, of, Subject, tap} from 'rxjs';
 import {FileGeneratorApiService} from './file-generator-api.service';
 import {JobDTO, JobSubscriptionRequest, PagedJobResponse, WebSocketMessage} from '../models/file-generation.models';
-import {RxStompService} from '../../../core/services/rx-stomp.service';
 import {GenerateFileResponse, ReportRequest} from '../models/report-request.models';
-
-const CONNECTION_TIMEOUT = 10000;
+import {MessageService} from 'primeng/api';
+import {RxStompService} from '../../../core/services/rx-stomp.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FileGenerationService {
-  private readonly jobUpdatesSubject: Subject<WebSocketMessage> = new Subject<WebSocketMessage>();
-  public readonly jobStatusUpdates$: Observable<WebSocketMessage> = this.jobUpdatesSubject.asObservable();
-  private readonly connectionStatusSubject: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-  public readonly connectionStatus$: Observable<boolean> = this.connectionStatusSubject.asObservable();
+  private readonly jobUpdatesSubject = new Subject<WebSocketMessage>();
+  public readonly jobStatusUpdates$ = this.jobUpdatesSubject.asObservable();
 
-  public constructor(
+  // Track active jobs
+  private activeJobs = new Set<string>();
+
+  constructor(
     private readonly rxStompService: RxStompService,
-    private readonly apiService: FileGeneratorApiService
+    private readonly apiService: FileGeneratorApiService,
+    private readonly messageService: MessageService,
+    private readonly ngZone: NgZone
   ) {
-    this.rxStompService.connectionState$.subscribe(state => {
-      this.connectionStatusSubject.next(state === RxStompState.OPEN);
+    // Initialize connection status monitoring
+    this.monitorConnectionStatus();
+  }
+
+  /**
+   * Simple connection monitoring
+   */
+  private monitorConnectionStatus(): void {
+    this.rxStompService.connectionStatus$.subscribe(connected => {
+      if (!connected) {
+        console.warn('WebSocket connection lost or not established');
+      }
     });
   }
 
   /**
-   * Poll for job status at regular intervals
-   * @param jobId ID of the job to poll
-   * @param intervalMs Polling interval in milliseconds
-   * @returns Observable with the job info on each poll
+   * Subscribe to job updates with better error handling
    */
-  public pollJobStatus(jobId: string, intervalMs: number = 3000): Observable<JobDTO | null> {
-    return timer(0, intervalMs).pipe(
-      switchMap(() => this.getJobFromRecent(jobId)),
-      tap(job => {
-        if (job) {
+  public subscribeToJobUpdates(jobId: string): Observable<boolean> {
+    // Already tracking this job
+    if (this.activeJobs.has(jobId)) {
+      return of(true);
+    }
+
+    this.activeJobs.add(jobId);
+
+    try {
+      // Create the subscription
+      const jobUpdates$ = this.rxStompService.watch(`/user/queue/job-updates/${jobId}`);
+      const subscription = jobUpdates$.subscribe({
+        next: message => {
+          try {
+            const update = JSON.parse(message.body) as WebSocketMessage;
+
+            // Use NgZone to ensure Angular change detection
+            this.ngZone.run(() => {
+              this.jobUpdatesSubject.next(update);
+            });
+
+            // Cleanup on terminal state
+            if (this.isJobCompleted(update.status)) {
+              this.activeJobs.delete(jobId);
+              subscription.unsubscribe();
+            }
+          } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+          }
+        },
+        error: error => {
+          console.error('WebSocket subscription error:', error);
+          this.activeJobs.delete(jobId);
+
+          // Fallback to polling for this job
+          this.fallbackToPolling(jobId);
+        }
+      });
+
+      // Register with the server
+      this.sendSubscriptionRequest(jobId);
+      return of(true);
+    } catch (error) {
+      console.error('Error setting up WebSocket subscription:', error);
+      this.activeJobs.delete(jobId);
+
+      // Fallback to polling
+      this.fallbackToPolling(jobId);
+      return of(false);
+    }
+  }
+
+  /**
+   * Simple method to send the subscription request to the server
+   */
+  private sendSubscriptionRequest(jobId: string): void {
+    try {
+      const request: JobSubscriptionRequest = { jobId };
+      this.rxStompService.publish({
+        destination: '/app/subscribe-job',
+        body: JSON.stringify(request)
+      });
+    } catch (error) {
+      console.error('Error sending subscription request:', error);
+      // We'll continue with the subscription anyway, as the server might still send updates
+    }
+  }
+
+  /**
+   * Simple polling fallback that checks job status every few seconds
+   */
+  private fallbackToPolling(jobId: string): void {
+    if (!this.activeJobs.has(jobId)) {
+      return; // Don't poll if we're not tracking this job anymore
+    }
+
+    console.log(`Falling back to polling for job ${jobId}`);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Connection Notice',
+      detail: 'Using polling for job updates (WebSocket unavailable)',
+      life: 5000
+    });
+
+    // Check job status immediately and then every 3 seconds
+    const checkStatus = () => {
+      if (!this.activeJobs.has(jobId)) {
+        return; // Stop polling if we're not tracking this job anymore
+      }
+
+      this.apiService.getJob(jobId).subscribe({
+        next: job => {
+          // Create an update message from the job status
           const update: WebSocketMessage = {
             jobId: job.jobId,
             fileType: job.fileType,
@@ -49,91 +144,90 @@ export class FileGenerationService {
             fileSize: job.fileSize,
             errorMessage: job.failureReason
           };
+
           this.jobUpdatesSubject.next(update);
+
+          // Stop polling when the job is complete
+          if (this.isJobCompleted(job.status)) {
+            this.activeJobs.delete(jobId);
+          } else {
+            // Continue polling
+            setTimeout(checkStatus, 3000);
+          }
+        },
+        error: err => {
+          console.error('Error polling job status:', err);
+          // Try again after a delay
+          setTimeout(checkStatus, 5000);
         }
-      }),
-      catchError(error => {
-        console.error('Error polling job status:', error);
-        return of(null);
-      })
-    );
+      });
+    };
+
+    // Start polling
+    checkStatus();
   }
 
   /**
-   * Subscribe to updates for a specific job via WebSocket
-   * @param jobId ID of the job to subscribe to
-   * @returns Observable indicating subscription success
+   * Check if a job is in a completed state (success, failure, or cancelled)
    */
-  public subscribeToJobUpdates(jobId: string): Observable<boolean> {
-    return this.rxStompService.ensureConnected().pipe(
-      tap(connected => {
-        if (!connected) {
-          console.warn(`WebSocket not connected, subscription to job ${jobId} will be delayed or may fail`);
-        } else {
-          console.log(`WebSocket connected, subscribing to updates for job: ${jobId}`);
-        }
-      }),
-      filter(connected => connected),
-      tap(() => {
-        const subscription = this.rxStompService.watch(`/user/queue/job-updates/${jobId}`);
-        subscription.subscribe({
-          next: message => {
-            try {
-              const update = JSON.parse(message.body) as WebSocketMessage;
-              console.log(`Received job update for ${jobId}:`, update);
-              this.jobUpdatesSubject.next(update);
-            } catch (e) {
-              console.error(`Error parsing job update message for ${jobId}:`, e);
-            }
-          },
-          error: err => console.error(`WebSocket subscription error for job ${jobId}:`, err)
-        });
-
-        const subscriptionRequest: JobSubscriptionRequest = {jobId};
-        this.rxStompService.publish({
-          destination: '/app/subscribe-job',
-          body: JSON.stringify(subscriptionRequest)
-        });
-
-        console.log(`Successfully subscribed to updates for job: ${jobId}`);
-      }),
-      map(() => true),
-      catchError(err => {
-        console.error(`Failed to subscribe to job ${jobId} updates:`, err);
-        return of(false);
-      })
-    );
+  private isJobCompleted(status: string): boolean {
+    return ['COMPLETED', 'FAILED', 'CANCELLED'].includes(status);
   }
 
   /**
    * Generate a new file
-   * @param request The report request containing type and parameters
-   * @returns Observable with the job details
    */
   public generateFile(request: ReportRequest): Observable<GenerateFileResponse> {
-    return this.apiService.generateFile(request);
+    return this.apiService.generateFile(request).pipe(
+      tap(response => {
+        if (response && response.jobId) {
+          // Try to subscribe to WebSocket updates, with fallback
+          this.subscribeToJobUpdates(response.jobId);
+        }
+      })
+    );
   }
 
   /**
-   * Get recent jobs with pagination
-   * @param page Page number (0-based)
-   * @param size Page size
-   * @returns Observable with paginated jobs
+   * Get recent jobs
    */
   public getRecentJobs(page: number = 0, size: number = 10): Observable<PagedJobResponse> {
-    return this.apiService.getRecentJobs(page, size);
+    return this.apiService.getRecentJobs(page, size).pipe(
+      tap(response => {
+        // Auto-subscribe to in-progress jobs
+        if (response && response.jobs) {
+          response.jobs
+            .filter(job => ['PENDING', 'IN_PROGRESS'].includes(job.status))
+            .forEach(job => {
+              this.subscribeToJobUpdates(job.jobId);
+            });
+        }
+      })
+    );
+  }
+
+  /**
+   * Get a single job by ID
+   */
+  public getJob(jobId: string): Observable<JobDTO> {
+    return this.apiService.getJob(jobId).pipe(
+      tap(job => {
+        // Auto-subscribe to updates if job is in progress
+        if (job && ['PENDING', 'IN_PROGRESS'].includes(job.status)) {
+          this.subscribeToJobUpdates(job.jobId);
+        }
+      })
+    );
   }
 
   /**
    * Download a generated file
-   * This method triggers a true file download by writing the file to disk
-   * @param jobId ID of the job to download
-   * @returns Observable indicating download success
    */
   public downloadFile(jobId: string): Observable<boolean> {
     return new Observable<boolean>(observer => {
       this.apiService.downloadFile(jobId).subscribe({
         next: (response) => {
+          // Extract filename from Content-Disposition header if available
           let filename = `report-${jobId}.csv`;
           const contentDisposition = response.headers.get('Content-Disposition');
           if (contentDisposition) {
@@ -143,15 +237,18 @@ export class FileGenerationService {
             }
           }
 
+          // Get blob from response
           const blob = response.body;
           if (!blob) {
             observer.error('No file content received');
             return;
           }
 
+          // Set correct content type
           const contentType = response.headers.get('Content-Type') || 'application/octet-stream';
-          const blobWithType = new Blob([blob], {type: contentType});
+          const blobWithType = new Blob([blob], { type: contentType });
 
+          // Save file to disk
           this.saveFile(blobWithType, filename);
           observer.next(true);
           observer.complete();
@@ -166,8 +263,6 @@ export class FileGenerationService {
 
   /**
    * Cancel a job
-   * @param jobId ID of the job to cancel
-   * @returns Observable indicating cancellation success
    */
   public cancelJob(jobId: string): Observable<{ cancelled: boolean }> {
     return this.apiService.cancelJob(jobId);
@@ -175,43 +270,27 @@ export class FileGenerationService {
 
   /**
    * Retry a failed job
-   * @param jobId ID of the job to retry
-   * @returns Observable with the new job details
    */
   public retryJob(jobId: string): Observable<GenerateFileResponse> {
-    return this.apiService.retryJob(jobId);
-  }
-
-  /**
-   * Get a job status by finding it in the recent jobs list
-   * @param jobId ID of the job to find
-   * @returns Observable with the job info if found
-   */
-  private getJobFromRecent(jobId: string): Observable<JobDTO | null> {
-    return this.apiService.getRecentJobs().pipe(
-      map(response => response.jobs.find(job => job.jobId === jobId) || null),
-      catchError(error => {
-        console.error(`Error fetching job info for job ${jobId}:`, error);
-        return of(null);
+    return this.apiService.retryJob(jobId).pipe(
+      tap(response => {
+        if (response && response.jobId) {
+          this.subscribeToJobUpdates(response.jobId);
+        }
       })
     );
   }
 
   /**
    * Helper method to save a file to disk
-   * @param blob Blob containing the file data
-   * @param filename Name to save the file as
    */
   private saveFile(blob: Blob, filename: string): void {
     const url = window.URL.createObjectURL(blob);
-
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
-
     link.click();
-
     window.URL.revokeObjectURL(url);
     document.body.removeChild(link);
   }

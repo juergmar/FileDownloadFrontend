@@ -20,7 +20,7 @@ import {FileGeneratorComponent} from './components/file-generator/file-generator
     MessageService
   ],
   templateUrl: './file-management.component.html',
-  styleUrls: ['./file-management.component.scss']
+  styleUrl: './file-management.component.scss'
 })
 export class FileManagementComponent {
   /**

@@ -39,24 +39,12 @@ export class AppComponent implements OnInit, OnDestroy {
   ) {}
 
   public ngOnInit(): void {
-    // Auto-login if not authenticated
-    if (!this.authService.loggedIn()) {
-      this.authService.login();
-    }
-
     // Subscribe to login state changes
     this.authService.isLoggedIn$
       .pipe(takeUntil(this.destroy$))
       .subscribe(isLoggedIn => {
         this.updateMenu();
-
-        if (isLoggedIn) {
-          this.username = this.authService.getUsername();
-        } else {
-          this.username = '';
-          // Auto-login when logged out
-          this.authService.login();
-        }
+        this.username = isLoggedIn ? this.authService.getUsername() : '';
       });
 
     // Initial menu setup
@@ -69,8 +57,6 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   public updateMenu(): void {
-    const isLoggedIn = this.authService.loggedIn();
-
     this.menuItems = [
       {
         label: 'Home',
@@ -80,7 +66,7 @@ export class AppComponent implements OnInit, OnDestroy {
       }
     ];
 
-    if (isLoggedIn) {
+    if (this.authService.loggedIn()) {
       this.menuItems.push(
         {
           label: 'File Management',
@@ -105,7 +91,6 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       );
     }
-    // Login button has been removed
   }
 
   public logout(): void {
@@ -115,9 +100,5 @@ export class AppComponent implements OnInit, OnDestroy {
       summary: 'Logged Out',
       detail: 'You have been successfully logged out'
     });
-    // Auto-login after logout
-    setTimeout(() => {
-      this.authService.login();
-    }, 1000);
   }
 }

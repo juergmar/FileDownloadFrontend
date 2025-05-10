@@ -1,18 +1,41 @@
-import {RxStompConfig} from '@stomp/rx-stomp';
+// rx-stomp.config.ts
+import { RxStompConfig } from '@stomp/rx-stomp';
+import { environment } from '../auth/auth-config';
+
+// We need a consistent WebSocket URL regardless of token changes
+// Hard-code the base URL to ensure consistency
+const WS_BASE_URL = 'ws://localhost:8080/ws';
 
 export const rxStompConfig: RxStompConfig = {
-  brokerURL: 'http://localhost:8080/ws',
+  // Use a function to create the complete URL with token
+  // This will be called each time we connect
+  brokerURL: WS_BASE_URL,
 
-  connectHeaders: {
-    Authorization: `Bearer ${localStorage.getItem('auth_token')}`
-  },
+  // Empty connect headers since we'll pass token as query param
+  connectHeaders: {},
 
-  heartbeatIncoming: 1000,
-  heartbeatOutgoing: 1000,
+  // Heartbeat configuration
+  heartbeatIncoming: 5000,
+  heartbeatOutgoing: 5000,
 
-  reconnectDelay: 2000,
+  // Reconnect settings
+  reconnectDelay: 5000,
 
+  // Debug function - helpful for troubleshooting but can be noisy
   debug: (msg: string): void => {
-    console.log(new Date(), msg);
+    if (!environment.production) {
+      console.log(`[WebSocket] ${new Date().toISOString()}: ${msg}`);
+    }
   }
 };
+
+// Helper function to get the complete WebSocket URL with token
+export function getWebSocketUrl(token: string): string {
+  // Ensure the URL is always correctly formed
+  if (!token) {
+    console.error('No token provided for WebSocket connection');
+    return WS_BASE_URL;
+  }
+
+  return `${WS_BASE_URL}?token=${encodeURIComponent(token)}`;
+}

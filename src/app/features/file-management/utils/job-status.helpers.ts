@@ -1,13 +1,9 @@
-import {JobStatus} from '../models/file-generation.models';
+import { JobStatus } from '../models/file-generation.models';
 
-/**
- * Helper functions for working with job statuses
- */
+
 export class JobStatusHelpers {
-  /**
-   * Get severity class for PrimeNG components based on job status
-   */
-  public static getSeverity(status: JobStatus): "success" | "secondary" | "info" | "warn" | "danger" | "contrast" | undefined {
+
+  public static getSeverity(status: JobStatus): "success" | "secondary" | "info" | "warn" | "danger" {
     switch (status) {
       case JobStatus.COMPLETED:
         return 'success';
@@ -23,25 +19,7 @@ export class JobStatusHelpers {
     }
   }
 
-  /**
-   * Check if a job is currently in progress
-   */
-  public static isInProgress(status: JobStatus): boolean {
-    return status === JobStatus.PENDING || status === JobStatus.IN_PROGRESS;
-  }
 
-  /**
-   * Check if a job has completed (successfully or not)
-   */
-  public static isCompleted(status: JobStatus): boolean {
-    return status === JobStatus.COMPLETED ||
-      status === JobStatus.FAILED ||
-      status === JobStatus.CANCELLED;
-  }
-
-  /**
-   * Get human-readable status message
-   */
   public static getStatusMessage(status: JobStatus): string {
     switch (status) {
       case JobStatus.PENDING:

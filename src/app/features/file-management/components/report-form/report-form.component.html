@@ -1,0 +1,66 @@
+<div class="p-fluid" [formGroup]="form">
+  <div class="p-field mb-3" *ngFor="let field of fields">
+    <!-- Number input -->
+    <ng-container *ngIf="field.type === 'number'">
+      <label [for]="field.name" class="form-label">{{ field.label }}</label>
+      <p-inputNumber
+        [id]="field.name"
+        formControlName="{{ field.name }}"
+        [min]="field.min"
+        [max]="field.max"
+        [showButtons]="true"
+        class="w-full"
+      ></p-inputNumber>
+      <small *ngIf="form.get(field.name)?.invalid && form.get(field.name)?.touched" class="p-error">
+        {{ field.label }} must be between {{ field.min }} and {{ field.max }}
+      </small>
+    </ng-container>
+
+    <!-- Text input -->
+    <ng-container *ngIf="field.type === 'text'">
+      <label [for]="field.name" class="form-label">{{ field.label }}</label>
+      <input
+        [id]="field.name"
+        type="text"
+        pInputText
+        formControlName="{{ field.name }}"
+        class="w-full"
+      />
+      <small *ngIf="form.get(field.name)?.invalid && form.get(field.name)?.touched" class="p-error">
+        {{ field.label }} is required
+      </small>
+    </ng-container>
+
+    <!-- Checkbox input -->
+    <ng-container *ngIf="field.type === 'checkbox'">
+      <div class="p-field-checkbox">
+        <p-checkbox
+          [id]="field.name"
+          [binary]="true"
+          formControlName="{{ field.name }}"
+        ></p-checkbox>
+        <label [for]="field.name" class="ml-2">{{ field.label }}</label>
+      </div>
+      <small *ngIf="field.helperText" class="form-helper-text">
+        {{ field.helperText }}
+      </small>
+    </ng-container>
+  </div>
+
+  <div class="form-actions mt-4">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      styleClass="p-button-text"
+      [disabled]="isGenerating"
+      (onClick)="cancelForm()"
+      class="mr-2"
+    ></p-button>
+    <p-button
+      label="Generate Report"
+      icon="pi pi-check"
+      [disabled]="!isValid() || isGenerating"
+      (onClick)="submitForm()"
+    ></p-button>
+  </div>
+</div>
